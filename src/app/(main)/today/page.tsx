@@ -1,0 +1,618 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { motion } from 'motion/react'
+import { Header } from '@/components/layout/Header'
+import { TaskCard } from '@/components/today/TaskCard'
+import { DayCloser } from '@/components/today/DayCloser'
+import { PriorityBadge } from '@/components/tasks/PriorityBadge'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { SkeletonCard, SkeletonStats } from '@/components/shared/Skeleton'
+import { api } from '@/lib/api'
+import { DailyTask, DailyTaskStatus, Priority, SubtaskStatus, Task, Project } from '@/lib/types'
+import { Plus, Inbox } from 'lucide-react'
+import Link from 'next/link'
+
+const priorityOrder: Record<string, number> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+}
+
+const listVariants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.05 } },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
+}
+
+export default function TodayPage() {
+  const [tasks, setTasks] = useState<DailyTask[]>([])
+  const [suggested, setSuggested] = useState<Task[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
+  const [planId, setPlanId] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [addingTaskId, setAddingTaskId] = useState<string | null>(null)
+  const [activeSessionsByTaskId, setActiveSessionsByTaskId] = useState<Record<string, string>>({})
+  const [timerBusyTaskIds, setTimerBusyTaskIds] = useState<Set<string>>(new Set())
+
+  const setTimerBusy = (taskId: string, busy: boolean) => {
+    setTimerBusyTaskIds((prev) => {
+      const next = new Set(prev)
+      if (busy) next.add(taskId)
+      else next.delete(taskId)
+      return next
+    })
+  }
+
+  const loadData = useCallback(async () => {
+    try {
+      const [plan, projectsList] = await Promise.all([
+        api.dailyPlans.getToday(),
+        api.projects.list(),
+      ])
+
+      if (plan.status === 'closed') {
+        window.location.href = '/history'
+        return
+      }
+
+      setPlanId(plan.id)
+      setTasks(plan.tasks || [])
+      setProjects(projectsList)
+
+      const runningTasks = (plan.tasks || []).filter((t) => t.status === 'in_progress')
+      if (runningTasks.length > 0) {
+        const results = await Promise.all(
+          runningTasks.map(async (t) => {
+            try {
+              const sessions = await api.timers.sessions(t.id)
+              const active = sessions.find((s) => !s.stopped_at)
+              return active ? ([t.id, active.started_at] as const) : null
+            } catch {
+              return null
+            }
+          })
+        )
+        const map: Record<string, string> = {}
+        for (const entry of results) {
+          if (entry) map[entry[0]] = entry[1]
+        }
+        setActiveSessionsByTaskId(map)
+      } else {
+        setActiveSessionsByTaskId({})
+      }
+
+      try {
+        const suggestions = await api.dailyPlans.getSuggestions()
+        const allSuggestions = [
+          ...(suggestions.rolled_over || []),
+          ...(suggestions.high_priority_backlog || []),
+          ...(suggestions.due_today || []),
+          ...(suggestions.recurring_today || []),
+        ]
+
+        const taskIdsInDay = new Set((plan.tasks || []).map((t) => t.task_id).filter(Boolean))
+        const recurringIdsInDay = new Set((plan.tasks || []).map((t) => t.recurring_task_id).filter(Boolean))
+
+        let unique = allSuggestions.filter(
+          (t: Task, i: number, arr: Task[]) => {
+            const isRecurring = t.id.startsWith('recurring_')
+            const recurringId = isRecurring ? t.id.replace('recurring_', '') : null
+            return (
+              arr.findIndex((x) => x.id === t.id) === i &&
+              !taskIdsInDay.has(t.id) &&
+              !recurringIdsInDay.has(recurringId ?? '')
+            )
+          }
+        )
+
+        if (unique.length === 0) {
+          const backlog = await api.tasks.backlog()
+          unique = backlog
+            .filter((t: Task) => !taskIdsInDay.has(t.id))
+            .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+            .slice(0, 10)
+        }
+
+        setSuggested(unique.slice(0, 10))
+      } catch {
+        const backlog = await api.tasks.backlog()
+        const taskIdsInDay = new Set((plan.tasks || []).map((t) => t.task_id).filter(Boolean))
+        setSuggested(
+          backlog
+            .filter((t: Task) => !taskIdsInDay.has(t.id))
+            .sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+            .slice(0, 10)
+        )
+      }
+    } catch (err) {
+      console.error('Failed to load today data:', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const handleUpdateStatus = async (taskId: string, status: DailyTaskStatus) => {
+    try {
+      const task = tasks.find((t) => t.id === taskId)
+
+      if (status === 'completed') {
+        await api.dailyTasks.complete(taskId)
+        if (task?.task_id) {
+          await api.tasks.update(task.task_id, { status: 'done' })
+        }
+      } else {
+        await api.dailyTasks.update(taskId, { status })
+      }
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, status, completedAt: status === 'completed' ? new Date().toISOString() : t.completed_at }
+            : t
+        )
+      )
+    } catch (err) {
+      console.error('Failed to update task status:', err)
+    }
+  }
+
+  const handleStartTimer = async (taskId: string) => {
+    setTimerBusy(taskId, true)
+    try {
+      const res = await api.timers.start(taskId)
+      setActiveSessionsByTaskId((prev) => ({ ...prev, [taskId]: res.started_at }))
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: 'in_progress' as DailyTaskStatus } : t))
+      )
+    } catch (err) {
+      console.error('Failed to start timer:', err)
+    } finally {
+      setTimerBusy(taskId, false)
+    }
+  }
+
+  const handlePauseTimer = async (taskId: string) => {
+    setTimerBusy(taskId, true)
+    try {
+      const res = await api.timers.pause(taskId)
+      const addedSeconds = res.duration_seconds || 0
+      setActiveSessionsByTaskId((prev) => {
+        const next = { ...prev }
+        delete next[taskId]
+        return next
+      })
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, status: 'paused' as DailyTaskStatus, total_seconds: t.total_seconds + addedSeconds }
+            : t
+        )
+      )
+    } catch (err) {
+      console.error('Failed to pause timer:', err)
+    } finally {
+      setTimerBusy(taskId, false)
+    }
+  }
+
+  const handleResumeTimer = async (taskId: string) => {
+    setTimerBusy(taskId, true)
+    try {
+      const res = await api.timers.resume(taskId)
+      setActiveSessionsByTaskId((prev) => ({ ...prev, [taskId]: res.started_at }))
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: 'in_progress' as DailyTaskStatus } : t))
+      )
+    } catch (err) {
+      console.error('Failed to resume timer:', err)
+    } finally {
+      setTimerBusy(taskId, false)
+    }
+  }
+
+  const handleResetTimer = async (taskId: string) => {
+    setTimerBusy(taskId, true)
+    try {
+      await api.timers.reset(taskId)
+      setActiveSessionsByTaskId((prev) => {
+        const next = { ...prev }
+        delete next[taskId]
+        return next
+      })
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, status: 'planned' as DailyTaskStatus, total_seconds: 0 }
+            : t
+        )
+      )
+    } catch (err) {
+      console.error('Failed to reset timer:', err)
+    } finally {
+      setTimerBusy(taskId, false)
+    }
+  }
+
+  const handleToggleSubtask = async (subtaskId: string) => {
+    const task = tasks.find((t) => t.subtasks.some((s) => s.id === subtaskId))
+    if (!task) return
+    const subtask = task.subtasks.find((s) => s.id === subtaskId)
+    if (!subtask) return
+    const newStatus: SubtaskStatus = subtask.status === 'completed' ? 'pending' : 'completed'
+    try {
+      await api.subtasks.update(task.id, subtaskId, { status: newStatus })
+      setTasks((prev) =>
+        prev.map((t) => ({
+          ...t,
+          subtasks: t.subtasks.map((st) =>
+            st.id === subtaskId ? { ...st, status: newStatus } : st
+          ),
+        }))
+      )
+    } catch (err) {
+      console.error('Failed to toggle subtask:', err)
+    }
+  }
+
+  const handleUpdateSubtask = async (
+    taskId: string,
+    subtaskId: string,
+    data: { title?: string; priority?: Priority }
+  ) => {
+    const prevTasks = tasks
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              subtasks: t.subtasks.map((st) =>
+                st.id === subtaskId ? { ...st, ...data } : st
+              ),
+            }
+          : t
+      )
+    )
+    try {
+      const updated = await api.subtasks.update(taskId, subtaskId, data)
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                subtasks: t.subtasks.map((st) => (st.id === subtaskId ? updated : st)),
+              }
+            : t
+        )
+      )
+    } catch (err) {
+      console.error('Failed to update subtask:', err)
+      setTasks(prevTasks)
+    }
+  }
+
+  const handleUpdateDescription = async (taskId: string, description: string) => {
+    const trimmed = description.trim()
+    const value = trimmed.length > 0 ? trimmed : null
+    await api.tasks.update(taskId, { description: value })
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.task_id === taskId ? { ...t, description: value ?? undefined } : t
+      )
+    )
+  }
+
+  const handleUpdateCategory = async (
+    taskId: string,
+    data: { category: string | null; meeting_time?: string | null }
+  ) => {
+    const payload: Record<string, unknown> = { category: data.category }
+    if (data.meeting_time !== undefined) payload.meeting_time = data.meeting_time
+    await api.tasks.update(taskId, payload)
+    setTasks((prev) =>
+      prev.map((t) =>
+        t.task_id === taskId
+          ? {
+              ...t,
+              category: data.category ?? undefined,
+              meeting_time: data.meeting_time ?? undefined,
+            }
+          : t
+      )
+    )
+  }
+
+  const handleAddSubtask = async (taskId: string, title: string) => {
+    try {
+      const newSubtask = await api.subtasks.create(taskId, { title, priority: 'medium' })
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, subtasks: [...t.subtasks, newSubtask] } : t
+        )
+      )
+    } catch (err) {
+      console.error('Failed to add subtask:', err)
+    }
+  }
+
+  const handleAddToToday = async (task: Task) => {
+    const alreadyInPlan = tasks.some((t) => t.task_id === task.id || t.recurring_task_id === task.id.replace('recurring_', ''))
+    if (alreadyInPlan || addingTaskId === task.id) return
+
+    setAddingTaskId(task.id)
+    try {
+      await api.dailyPlans.addTask(planId, { task_id: task.id, priority: task.priority })
+      const updatedPlan = await api.dailyPlans.getToday()
+      setPlanId(updatedPlan.id)
+      setTasks(updatedPlan.tasks || [])
+      setSuggested((prev) => prev.filter((t) => t.id !== task.id))
+    } catch (err) {
+      console.error('Failed to add task to today:', err)
+    } finally {
+      setAddingTaskId(null)
+    }
+  }
+
+  const handleRemoveFromToday = async (taskId: string) => {
+    try {
+      await api.dailyTasks.remove(taskId)
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
+    } catch (err) {
+      console.error('Failed to remove task from today:', err)
+    }
+  }
+
+  const handleCloseDay = async () => {
+    try {
+      await api.dailyPlans.close(planId)
+      window.location.href = '/history'
+    } catch (err) {
+      console.error('Failed to close day:', err)
+      alert('Error al cerrar el día')
+    }
+  }
+
+  const completedCount = tasks.filter((t) => t.status === 'completed').length
+  const inProgressCount = tasks.filter((t) => t.status === 'in_progress' || t.status === 'paused').length
+  const plannedCount = tasks.filter((t) => t.status === 'planned').length
+  const totalSeconds = tasks.reduce((acc, t) => acc + t.total_seconds, 0)
+
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const aDone = a.status === 'completed' ? 1 : 0
+    const bDone = b.status === 'completed' ? 1 : 0
+    if (aDone !== bDone) return aDone - bDone
+    return priorityOrder[a.priority] - priorityOrder[b.priority]
+  })
+
+  if (loading) {
+    return (
+      <div>
+        <Header title="Today" subtitle="Cargando tu plan diario..." />
+        <div className="p-8 max-w-4xl mx-auto space-y-6">
+          <SkeletonStats />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => <div key={i} className="animate-slide-in-up" style={{ animationDelay: `${i * 0.06}s` }}><div className="bg-bg-elevated border border-border rounded-xl p-4 h-20 animate-shimmer" /></div>)}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <Header title="Today" subtitle="Planifica y ejecuta tu día" />
+
+      <div className="p-8 max-w-4xl mx-auto space-y-6">
+        {tasks.length === 0 && suggested.length === 0 ? (
+          <EmptyState
+            icon={<Inbox className="w-8 h-8" />}
+            title="No hay tareas para hoy"
+            description="Selecciona tareas del backlog o añade nuevas para comenzar tu día"
+            action={
+              <Link
+                href="/backlog"
+                className="flex items-center gap-2 px-4 py-2.5 bg-accent text-accent-fg font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Ir al Backlog
+              </Link>
+            }
+          />
+        ) : tasks.length === 0 && suggested.length > 0 ? (
+          <motion.div className="space-y-4" variants={listVariants} initial="hidden" animate="show">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-text mb-1">Comienza tu día</h3>
+              <p className="text-sm text-text-muted">Selecciona tareas del backlog para añadir a hoy</p>
+            </div>
+
+            <div className="space-y-2">
+              {suggested.map((task) => {
+                const project = projects.find((p) => p.id === task.project_id)
+                return (
+                  <motion.div
+                    key={task.id}
+                    variants={itemVariants}
+                    className="flex items-center justify-between p-4 bg-bg-elevated border border-border rounded-xl hover:border-border-strong hover:shadow-[var(--shadow-md)] transition-all"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <PriorityBadge priority={task.priority} />
+                      <span className="text-sm font-medium text-text truncate">{task.title}</span>
+                      {task.source === 'jira' && task.external_key && (
+                        <span className="text-xs text-accent font-mono flex-shrink-0">{task.external_key}</span>
+                      )}
+                      {project && (
+                        <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: project.color }} />
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleAddToToday(task)}
+                      disabled={addingTaskId === task.id}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] flex-shrink-0 ml-3 transition-colors disabled:opacity-60"
+                    >
+                      {addingTaskId === task.id ? (
+                        <span className="w-4 h-4 border-2 border-accent-fg/40 border-t-accent-fg rounded-full animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
+                      Añadir a hoy
+                    </button>
+                  </motion.div>
+                )
+              })}
+            </div>
+
+            <div className="text-center pt-4">
+              <Link href="/backlog" className="text-sm text-accent hover:text-[var(--accent-hover)] font-medium">
+                Ver todas las tareas del backlog →
+              </Link>
+            </div>
+          </motion.div>
+        ) : (
+          <>
+            <motion.div
+              className="flex items-center justify-between"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-info-soft rounded-lg">
+                  <span className="text-xs font-medium text-[var(--info)]">{inProgressCount} en curso</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-bg-muted rounded-lg">
+                  <span className="text-xs font-medium text-text-muted">{plannedCount} planeadas</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-success-soft rounded-lg">
+                  <span className="text-xs font-medium text-[var(--success)]">{completedCount} completadas</span>
+                </div>
+              </div>
+              <span className="text-sm text-text-subtle">{tasks.length} tareas en total</span>
+            </motion.div>
+
+            <motion.div
+              className="space-y-3"
+              variants={listVariants}
+              initial="hidden"
+              animate="show"
+            >
+              {sortedTasks.map((task) => (
+                <motion.div key={task.id} variants={itemVariants}>
+                  <TaskCard
+                    task={task}
+                    activeSessionStartedAt={activeSessionsByTaskId[task.id] ?? null}
+                    timerBusy={timerBusyTaskIds.has(task.id)}
+                    onUpdateStatus={handleUpdateStatus}
+                    onToggleSubtask={handleToggleSubtask}
+                    onAddSubtask={handleAddSubtask}
+                    onUpdateSubtask={handleUpdateSubtask}
+                    onUpdateDescription={handleUpdateDescription}
+                    onUpdateCategory={handleUpdateCategory}
+                    onRemove={handleRemoveFromToday}
+                    onStartTimer={handleStartTimer}
+                    onPauseTimer={handlePauseTimer}
+                    onResumeTimer={handleResumeTimer}
+                    onResetTimer={handleResetTimer}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {suggested.length > 0 && (
+              <div className="mt-8 pt-6 border-t border-border">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-text-muted">
+                    Sugerencias del backlog ({suggested.length})
+                  </h3>
+                  <button
+                    onClick={() => setShowSuggestions(!showSuggestions)}
+                    className="text-xs text-accent hover:text-[var(--accent-hover)] font-medium transition-colors"
+                  >
+                    {showSuggestions ? 'Ocultar' : 'Ver todas'}
+                  </button>
+                </div>
+
+                {showSuggestions && (
+                  <motion.div
+                    className="space-y-2 mb-4"
+                    variants={listVariants}
+                    initial="hidden"
+                    animate="show"
+                  >
+                    {suggested.map((task) => {
+                      const project = projects.find((p) => p.id === task.project_id)
+                      const alreadyInPlan = tasks.some((t) => t.task_id === task.id)
+
+                      return (
+                        <motion.div
+                          key={task.id}
+                          variants={itemVariants}
+                          className={`flex items-center justify-between p-3 border rounded-lg transition-colors ${
+                            alreadyInPlan
+                              ? 'bg-bg-muted border-border'
+                              : 'bg-bg-elevated border-border hover:border-border-strong'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <PriorityBadge priority={task.priority} />
+                            <span className={`text-sm truncate ${alreadyInPlan ? 'text-text-subtle' : 'text-text'}`}>
+                              {task.title}
+                            </span>
+                            {task.source === 'jira' && task.external_key && (
+                              <span className="text-xs text-accent font-mono flex-shrink-0">{task.external_key}</span>
+                            )}
+                            {project && (
+                              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: project.color }} />
+                            )}
+                            {alreadyInPlan && (
+                              <span className="text-xs text-[var(--success)] font-medium flex-shrink-0">✓ En el plan</span>
+                            )}
+                          </div>
+                          {alreadyInPlan ? (
+                            <button disabled className="flex items-center gap-1.5 px-3 py-1.5 bg-bg-muted text-text-subtle text-xs font-medium rounded-lg flex-shrink-0 ml-3 cursor-not-allowed">
+                              <Plus className="w-3 h-3" /> Añadida
+                            </button>
+                          ) : addingTaskId === task.id ? (
+                            <button disabled className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/60 text-accent-fg text-xs font-medium rounded-lg flex-shrink-0 ml-3 cursor-wait">
+                              <span className="w-3 h-3 border-2 border-accent-fg/40 border-t-accent-fg rounded-full animate-spin" />
+                              Añadiendo...
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleAddToToday(task)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-accent-fg text-xs font-medium rounded-lg hover:bg-[var(--accent-hover)] flex-shrink-0 ml-3 transition-colors"
+                            >
+                              <Plus className="w-3 h-3" /> Añadir
+                            </button>
+                          )}
+                        </motion.div>
+                      )
+                    })}
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-8 pt-6 border-t border-border">
+              <DayCloser
+                completedCount={completedCount}
+                rolledOverCount={tasks.length - completedCount}
+                totalSeconds={totalSeconds}
+                onCloseDay={handleCloseDay}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}

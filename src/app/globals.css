@@ -1,26 +1,258 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Semantic tokens ───────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Surfaces */
+  --bg: #fafafa;
+  --bg-elevated: #ffffff;
+  --bg-muted: #f4f4f5;
+  --sidebar-bg: rgba(255, 255, 255, 0.85);
+
+  /* Borders */
+  --border: #e4e4e7;
+  --border-strong: #a1a1aa;
+
+  /* Text */
+  --text: #18181b;
+  --text-muted: #52525b;
+  --text-subtle: #a1a1aa;
+
+  /* Accent — violet */
+  --accent: #7c3aed;
+  --accent-fg: #ffffff;
+  --accent-soft: #ede9fe;
+  --accent-hover: #6d28d9;
+  --glow-color: rgba(124, 58, 237, 0.2);
+
+  /* States */
+  --success: #059669;
+  --success-fg: #ffffff;
+  --success-soft: #d1fae5;
+
+  --warning: #d97706;
+  --warning-fg: #ffffff;
+  --warning-soft: #fef3c7;
+
+  --danger: #dc2626;
+  --danger-fg: #ffffff;
+  --danger-soft: #fee2e2;
+
+  --info: #2563eb;
+  --info-fg: #ffffff;
+  --info-soft: #dbeafe;
+
+  /* Priority */
+  --priority-critical-bg: #fee2e2;
+  --priority-critical-text: #991b1b;
+  --priority-critical-border: #fca5a5;
+
+  --priority-high-bg: #ffedd5;
+  --priority-high-text: #9a3412;
+  --priority-high-border: #fdba74;
+
+  --priority-medium-bg: #fef9c3;
+  --priority-medium-text: #854d0e;
+  --priority-medium-border: #fde047;
+
+  --priority-low-bg: #dcfce7;
+  --priority-low-text: #166534;
+  --priority-low-border: #86efac;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.07);
+  --shadow-glow: 0 0 0 1px var(--accent), 0 0 24px 0 var(--glow-color);
 }
 
+.dark {
+  --bg: #09090b;
+  --bg-elevated: #18181b;
+  --bg-muted: #27272a;
+  --sidebar-bg: rgba(9, 9, 11, 0.9);
+
+  --border: #27272a;
+  --border-strong: #52525b;
+
+  --text: #fafafa;
+  --text-muted: #a1a1aa;
+  --text-subtle: #52525b;
+
+  --accent: #a78bfa;
+  --accent-fg: #1a0936;
+  --accent-soft: #2e1065;
+  --accent-hover: #8b5cf6;
+  --glow-color: rgba(167, 139, 250, 0.25);
+
+  --success: #34d399;
+  --success-soft: #064e3b;
+
+  --warning: #fbbf24;
+  --warning-soft: #451a03;
+
+  --danger: #f87171;
+  --danger-soft: #450a0a;
+
+  --info: #60a5fa;
+  --info-soft: #1e3a5f;
+
+  --priority-critical-bg: #450a0a;
+  --priority-critical-text: #fca5a5;
+  --priority-critical-border: #7f1d1d;
+
+  --priority-high-bg: #431407;
+  --priority-high-text: #fdba74;
+  --priority-high-border: #7c2d12;
+
+  --priority-medium-bg: #422006;
+  --priority-medium-text: #fde047;
+  --priority-medium-border: #713f12;
+
+  --priority-low-bg: #052e16;
+  --priority-low-text: #86efac;
+  --priority-low-border: #14532d;
+
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+  --shadow-glow: 0 0 0 1px var(--accent), 0 0 24px 0 var(--glow-color);
+}
+
+/* ── Map tokens to Tailwind utilities ──────────────────────────── */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-bg: var(--bg);
+  --color-bg-elevated: var(--bg-elevated);
+  --color-bg-muted: var(--bg-muted);
+  --color-sidebar: var(--sidebar-bg);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ── Base ──────────────────────────────────────────────────────── */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition: background-color 220ms ease, color 220ms ease;
+}
+
+input,
+textarea,
+select {
+  background-color: var(--bg-elevated);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-subtle);
+}
+
+/* ── Keyframes ─────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.25;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ── Utility classes ───────────────────────────────────────────── */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-muted) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-muted) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out both;
+}
+
+.animate-slide-in-up {
+  animation: slide-in-up 0.3s ease-out both;
+}
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
