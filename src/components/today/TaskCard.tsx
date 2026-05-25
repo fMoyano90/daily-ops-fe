@@ -189,11 +189,14 @@ export function TaskCard({
                         : undefined
                     }
                   />
-                  {task.total_seconds > 0 && (
-                    <span className="text-xs text-text-subtle font-mono">
-                      {formatDuration(task.total_seconds)}
-                    </span>
-                  )}
+                  {(() => {
+                    const displaySeconds = task.live_total_seconds ?? task.total_seconds
+                    return displaySeconds > 0 && (
+                      <span className="text-xs text-text-subtle font-mono">
+                        {formatDuration(displaySeconds)}
+                      </span>
+                    )
+                  })()}
                 </div>
               </div>
 
@@ -372,7 +375,7 @@ export function TaskCard({
             <div className="min-w-0">
               <h2 className="text-base font-semibold text-text">¿Reiniciar el conteo?</h2>
               <p className="text-sm text-text-muted mt-1">
-                Se perderá el tiempo registrado{task.total_seconds > 0 ? ` (${formatDuration(task.total_seconds)})` : ''}. Esta acción no se puede deshacer.
+                Se perderá el tiempo registrado{(() => { const s = task.live_total_seconds ?? task.total_seconds; return s > 0 ? ` (${formatDuration(s)})` : '' })()}. Esta acción no se puede deshacer.
               </p>
             </div>
           </div>

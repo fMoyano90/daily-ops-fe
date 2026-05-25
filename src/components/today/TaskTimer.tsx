@@ -39,6 +39,7 @@ export function TaskTimer({
 
   useEffect(() => {
     if (status !== 'running' || !activeSessionStartedAt) return
+    setNow(Date.now())
     const interval = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(interval)
   }, [status, activeSessionStartedAt])

@@ -104,6 +104,7 @@ export interface DailyTask {
   priority: Priority
   status: DailyTaskStatus
   total_seconds: number
+  live_total_seconds?: number
   sort_order: number
   started_at?: string
   completed_at?: string

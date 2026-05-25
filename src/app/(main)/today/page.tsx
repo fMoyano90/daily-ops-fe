@@ -73,6 +73,7 @@ export default function TodayPage() {
             try {
               const sessions = await api.timers.sessions(t.id)
               const active = sessions.find((s) => !s.stopped_at)
+              console.log('[timer] task:', t.id, 'status:', t.status, 'live_total_seconds:', (t as any).live_total_seconds, 'total_seconds:', t.total_seconds, 'sessions:', sessions.length, 'active:', !!active)
               return active ? ([t.id, active.started_at] as const) : null
             } catch {
               return null
@@ -83,6 +84,7 @@ export default function TodayPage() {
         for (const entry of results) {
           if (entry) map[entry[0]] = entry[1]
         }
+        console.log('[timer] activeSessionsByTaskId:', map)
         setActiveSessionsByTaskId(map)
       } else {
         setActiveSessionsByTaskId({})
@@ -173,7 +175,7 @@ export default function TodayPage() {
       const res = await api.timers.start(taskId)
       setActiveSessionsByTaskId((prev) => ({ ...prev, [taskId]: res.started_at }))
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: 'in_progress' as DailyTaskStatus } : t))
+        prev.map((t) => (t.id === taskId ? { ...t, status: 'in_progress' as DailyTaskStatus, live_total_seconds: t.total_seconds } : t))
       )
     } catch (err) {
       console.error('Failed to start timer:', err)
@@ -195,7 +197,7 @@ export default function TodayPage() {
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
-            ? { ...t, status: 'paused' as DailyTaskStatus, total_seconds: t.total_seconds + addedSeconds }
+            ? { ...t, status: 'paused' as DailyTaskStatus, total_seconds: t.total_seconds + addedSeconds, live_total_seconds: t.total_seconds + addedSeconds }
             : t
         )
       )
@@ -212,7 +214,7 @@ export default function TodayPage() {
       const res = await api.timers.resume(taskId)
       setActiveSessionsByTaskId((prev) => ({ ...prev, [taskId]: res.started_at }))
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: 'in_progress' as DailyTaskStatus } : t))
+        prev.map((t) => (t.id === taskId ? { ...t, status: 'in_progress' as DailyTaskStatus, live_total_seconds: t.total_seconds } : t))
       )
     } catch (err) {
       console.error('Failed to resume timer:', err)
@@ -233,7 +235,7 @@ export default function TodayPage() {
       setTasks((prev) =>
         prev.map((t) =>
           t.id === taskId
-            ? { ...t, status: 'planned' as DailyTaskStatus, total_seconds: 0 }
+            ? { ...t, status: 'planned' as DailyTaskStatus, total_seconds: 0, live_total_seconds: 0 }
             : t
         )
       )
@@ -385,7 +387,7 @@ export default function TodayPage() {
   const completedCount = tasks.filter((t) => t.status === 'completed').length
   const inProgressCount = tasks.filter((t) => t.status === 'in_progress' || t.status === 'paused').length
   const plannedCount = tasks.filter((t) => t.status === 'planned').length
-  const totalSeconds = tasks.reduce((acc, t) => acc + t.total_seconds, 0)
+  const totalSeconds = tasks.reduce((acc, t) => acc + (t.live_total_seconds ?? t.total_seconds), 0)
 
   const sortedTasks = [...tasks].sort((a, b) => {
     const aDone = a.status === 'completed' ? 1 : 0
