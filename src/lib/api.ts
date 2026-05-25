@@ -1,12 +1,73 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User } from '@/lib/types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
 
-async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
+function getAccessToken(): string | null {
+  try {
+    return localStorage.getItem('dailyops-access')
+  } catch {
+    return null
+  }
+}
+
+function getRefreshToken(): string | null {
+  try {
+    return localStorage.getItem('dailyops-refresh')
+  } catch {
+    return null
+  }
+}
+
+function storeTokens(access: string | null, refresh: string | null) {
+  try {
+    if (access) localStorage.setItem('dailyops-access', access)
+    else localStorage.removeItem('dailyops-access')
+    if (refresh) localStorage.setItem('dailyops-refresh', refresh)
+    else localStorage.removeItem('dailyops-refresh')
+  } catch {
+    // ignore
+  }
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refresh = getRefreshToken()
+  if (!refresh) return null
+  try {
+    const res = await fetch(`${API_BASE}/auth/refresh?token=${refresh}`, { method: 'POST' })
+    if (!res.ok) return null
+    const data = await res.json()
+    storeTokens(data.access_token, data.refresh_token)
+    return data.access_token
+  } catch {
+    return null
+  }
+}
+
+async function fetchApi<T>(path: string, options?: RequestInit, retryCount = 0): Promise<T> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', ...(options?.headers as Record<string, string> || {}) }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers,
     ...options,
   })
+
+  if (res.status === 401 && retryCount === 0) {
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      return fetchApi<T>(path, options, retryCount + 1)
+    }
+    // Refresh failed — logout
+    storeTokens(null, null)
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login'
+    }
+    throw new Error('Authentication required')
+  }
+
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(error.detail || 'Request failed')
@@ -16,6 +77,27 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  auth: {
+    login: async (email: string, password: string) => {
+      const res = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(error.detail || 'Login failed')
+      }
+      const data = await res.json()
+      storeTokens(data.access_token, data.refresh_token)
+      return data
+    },
+    me: () => fetchApi<User>('/auth/me'),
+    logout: () => {
+      storeTokens(null, null)
+    },
+  },
+
   projects: {
     list: () => fetchApi<Project[]>('/projects'),
     create: (data: { name: string; type: string; color: string }) =>
