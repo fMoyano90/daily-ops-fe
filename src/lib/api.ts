@@ -1,6 +1,37 @@
 import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User } from '@/lib/types'
+import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+
+const CACHE_PREFIX = 'api-cache:'
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000 // 24h
+
+interface CachedEntry<T> {
+  data: T
+  timestamp: number
+}
+
+async function readCache<T>(key: string): Promise<T | null> {
+  try {
+    const entry = (await idbGet(CACHE_PREFIX + key)) as CachedEntry<T> | undefined
+    if (!entry) return null
+    if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+      idbDel(CACHE_PREFIX + key).catch(() => {})
+      return null
+    }
+    return entry.data
+  } catch {
+    return null
+  }
+}
+
+async function writeCache<T>(key: string, data: T): Promise<void> {
+  try {
+    await idbSet(CACHE_PREFIX + key, { data, timestamp: Date.now() } satisfies CachedEntry<T>)
+  } catch {
+    // ignore
+  }
+}
 
 function getAccessToken(): string | null {
   try {
@@ -50,10 +81,24 @@ async function fetchApi<T>(path: string, options?: RequestInit, retryCount = 0):
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers,
-    ...options,
-  })
+  const method = (options?.method || 'GET').toUpperCase()
+  const isGet = method === 'GET'
+  const cacheKey = isGet ? path : null
+
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      headers,
+      ...options,
+    })
+  } catch (err) {
+    // Red caída: si era GET y tenemos copia, devolvemos cache.
+    if (cacheKey) {
+      const cached = await readCache<T>(cacheKey)
+      if (cached !== null) return cached
+    }
+    throw err
+  }
 
   if (res.status === 401 && retryCount === 0) {
     const newToken = await refreshAccessToken()
@@ -69,11 +114,18 @@ async function fetchApi<T>(path: string, options?: RequestInit, retryCount = 0):
   }
 
   if (!res.ok) {
+    // Si la API responde 5xx y tenemos cache, mejor servirla que romper la UI.
+    if (cacheKey && res.status >= 500) {
+      const cached = await readCache<T>(cacheKey)
+      if (cached !== null) return cached
+    }
     const error = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(error.detail || 'Request failed')
   }
   if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
+  const data = (await res.json()) as T
+  if (cacheKey) writeCache(cacheKey, data)
+  return data
 }
 
 export const api = {
@@ -280,5 +332,27 @@ export const api = {
       fetchApi<RecurringTask>(`/recurring-tasks/${id}`, { method: 'PATCH', body: JSON.stringify({ is_active: isActive }) }),
     delete: (id: string) => fetchApi<void>(`/recurring-tasks/${id}`, { method: 'DELETE' }),
     history: (id: string, limit = 30) => fetchApi<RecurringInstance[]>(`/recurring-tasks/${id}/history?limit=${limit}`),
+  },
+
+  push: {
+    getPublicKey: () => fetchApi<{ key: string }>('/push/vapid-public-key'),
+    subscribe: (data: {
+      endpoint: string
+      keys: { p256dh: string; auth: string }
+      user_agent?: string
+    }) =>
+      fetchApi<{ id: string; endpoint: string; created_at: string }>('/push/subscribe', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    unsubscribe: (endpoint: string) =>
+      fetchApi<void>(`/push/subscribe?endpoint=${encodeURIComponent(endpoint)}`, {
+        method: 'DELETE',
+      }),
+    test: (data: { title?: string; body?: string; url?: string } = {}) =>
+      fetchApi<{ sent: number }>('/push/test', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
 }

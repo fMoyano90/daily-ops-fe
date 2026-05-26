@@ -35,7 +35,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
   return (
     <motion.aside
-      className="fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar backdrop-blur-xl border-r border-border"
+      className="hidden md:flex fixed inset-y-0 left-0 z-50 flex-col bg-sidebar backdrop-blur-xl border-r border-border"
       animate={{ width: collapsed ? '5rem' : '16rem' }}
       transition={{ type: 'spring', stiffness: 300, damping: 35, mass: 0.8 }}
     >

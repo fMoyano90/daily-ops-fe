@@ -1,8 +1,10 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion } from 'motion/react'
 import { Header } from '@/components/layout/Header'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
 import { ProjectBadge } from '@/components/tasks/ProjectBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -43,23 +45,26 @@ export default function BacklogPage() {
   const [addingRecurring, setAddingRecurring] = useState<string | null>(null)
   const [addingToToday, setAddingToToday] = useState<string | null>(null)
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [backlog, projectsList] = await Promise.all([
-          api.tasks.backlog(),
-          api.projects.list(),
-        ])
-        setTasks(backlog)
-        setProjects(projectsList)
-      } catch (err) {
-        console.error('Failed to load backlog:', err)
-      } finally {
-        setLoading(false)
-      }
+  const loadData = useCallback(async () => {
+    try {
+      const [backlog, projectsList] = await Promise.all([
+        api.tasks.backlog(),
+        api.projects.list(),
+      ])
+      setTasks(backlog)
+      setProjects(projectsList)
+    } catch (err) {
+      console.error('Failed to load backlog:', err)
+    } finally {
+      setLoading(false)
     }
-    loadData()
   }, [])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const ptr = usePullToRefresh({ onRefresh: loadData })
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -195,8 +200,8 @@ export default function BacklogPage() {
     return (
       <div>
         <Header title="Backlog" subtitle="Cargando tareas..." />
-        <div className="p-8 max-w-5xl mx-auto space-y-6">
-          <div className="grid grid-cols-4 gap-3">
+        <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
           </div>
           <div className="space-y-2">
@@ -211,9 +216,10 @@ export default function BacklogPage() {
 
   return (
     <div>
+      <PullToRefreshIndicator pull={ptr.pull} refreshing={ptr.refreshing} progress={ptr.progress} />
       <Header title="Backlog" subtitle="Todas tus tareas pendientes" />
 
-      <div className="p-8 max-w-5xl mx-auto space-y-6">
+      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ListFilter className="w-4 h-4 text-text-subtle" />

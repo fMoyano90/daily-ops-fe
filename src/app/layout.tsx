@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,6 +16,30 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DailyOps - Organiza tu día",
   description: "Planifica, ejecuta y mide tu trabajo diario",
+  applicationName: "DailyOps",
+  appleWebApp: {
+    capable: true,
+    title: "DailyOps",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
 };
 
 export default function RootLayout({
@@ -47,6 +72,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

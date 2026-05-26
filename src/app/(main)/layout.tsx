@@ -3,6 +3,8 @@
 import { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { MainLayout } from '@/components/layout/MainLayout'
+import { InstallPrompt } from '@/components/pwa/InstallPrompt'
+import { OfflineBanner } from '@/components/pwa/OfflineBanner'
 import { useAuthStore } from '@/stores/authStore'
 
 export default function MainLayoutWrapper({
@@ -36,5 +38,11 @@ export default function MainLayoutWrapper({
     return null
   }
 
-  return <MainLayout>{children}</MainLayout>
+  return (
+    <MainLayout>
+      <OfflineBanner />
+      {children}
+      <InstallPrompt />
+    </MainLayout>
+  )
 }

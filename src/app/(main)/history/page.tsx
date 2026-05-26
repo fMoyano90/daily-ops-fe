@@ -64,7 +64,7 @@ export default function HistoryPage() {
     return (
       <div>
         <Header title="History" subtitle="Cargando historial..." />
-        <div className="p-8 max-w-4xl mx-auto space-y-6">
+        <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
           <SkeletonStats />
           <div className="space-y-3">
             {[1, 2, 3, 4].map((i) => <SkeletonCard key={i} />)}
@@ -78,9 +78,9 @@ export default function HistoryPage() {
     <div>
       <Header title="History" subtitle="Revisa tu progreso y tiempo trabajado" />
 
-      <div className="p-8 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
         <motion.div
-          className="grid grid-cols-3 gap-4"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4"
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25 }}

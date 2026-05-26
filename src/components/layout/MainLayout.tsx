@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'motion/react'
 import { Sidebar } from './Sidebar'
+import { MobileBottomNav } from './MobileBottomNav'
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -14,13 +14,15 @@ export function MainLayout({ children }: MainLayoutProps) {
   return (
     <div className="min-h-screen bg-bg">
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <motion.main
-        className="min-h-screen"
-        animate={{ marginLeft: collapsed ? '5rem' : '16rem' }}
-        transition={{ type: 'spring', stiffness: 300, damping: 35, mass: 0.8 }}
+      <main
+        className={
+          'min-h-screen pb-bottom-nav transition-[margin] duration-300 ease-out ' +
+          (collapsed ? 'md:ml-20' : 'md:ml-64')
+        }
       >
         {children}
-      </motion.main>
+      </main>
+      <MobileBottomNav />
     </div>
   )
 }

@@ -246,6 +246,53 @@ textarea::placeholder {
   animation: slide-in-up 0.3s ease-out both;
 }
 
+/* ── Safe areas (PWA / notch) ──────────────────────────────────── */
+.safe-pt {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.safe-pl {
+  padding-left: env(safe-area-inset-left);
+}
+.safe-pr {
+  padding-right: env(safe-area-inset-right);
+}
+.safe-px {
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ── Touch target mínimo 44px (Apple HIG) ──────────────────────── */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Mobile bottom nav spacer ──────────────────────────────────── */
+.pb-bottom-nav {
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .pb-bottom-nav {
+    padding-bottom: 0;
+  }
+}
+
+/* ── Disable text-size-adjust on mobile Safari ─────────────────── */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── Prevent overscroll bounce hijacking pull-to-refresh ───────── */
+body {
+  overscroll-behavior-y: contain;
+}
+
 /* ── Reduced motion ────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,

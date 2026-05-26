@@ -10,6 +10,8 @@ import { Plus, Settings2, Link, Zap } from 'lucide-react'
 import { Skeleton } from '@/components/shared/Skeleton'
 import { JiraConnections } from '@/components/settings/JiraConnections'
 import { NewProjectModal } from '@/components/settings/NewProjectModal'
+import { PushSubscribeButton } from '@/components/pwa/PushSubscribeButton'
+import { Bell } from 'lucide-react'
 
 const listVariants = {
   hidden: {},
@@ -48,7 +50,7 @@ export default function SettingsPage() {
     <div>
       <Header title="Settings" subtitle="Configuración de proyectos e integraciones" />
 
-      <div className="p-8 max-w-4xl mx-auto space-y-8">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-8">
         <section>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -113,6 +115,20 @@ export default function SettingsPage() {
           onClose={() => setShowNewProject(false)}
           onCreated={handleProjectCreated}
         />
+
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Bell className="w-5 h-5 text-text-subtle" />
+            <h3 className="text-lg font-semibold text-text">Notificaciones</h3>
+          </div>
+          <div className="p-4 bg-bg-elevated border border-border rounded-xl">
+            <p className="text-sm text-text-muted mb-3">
+              Activa las notificaciones push para recibir recordatorios de tareas y eventos importantes.
+              En iOS necesitas instalar la app desde Compartir → Añadir a inicio.
+            </p>
+            <PushSubscribeButton />
+          </div>
+        </section>
 
         <section>
           <div className="flex items-center gap-2 mb-4">

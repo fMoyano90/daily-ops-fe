@@ -102,6 +102,39 @@ export function TaskCard({
     onResetTimer(task.id)
   }
 
+  const actionButtons = (
+    <>
+      {!isCompleted && task.status !== 'in_progress' && task.status !== 'paused' && (
+        <button
+          onClick={() => onStartTimer(task.id)}
+          disabled={timerBusy}
+          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-accent text-accent-fg text-xs font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors whitespace-nowrap disabled:opacity-60"
+        >
+          Iniciar
+        </button>
+      )}
+      {!isCompleted && (
+        <button
+          onClick={handleComplete}
+          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-success-soft text-[var(--success)] text-xs font-medium rounded-lg hover:bg-[var(--success)] hover:text-[var(--success-fg)] transition-colors whitespace-nowrap"
+        >
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          Finalizar
+        </button>
+      )}
+      {isRecurring && !isCompleted && onRemove && (
+        <button
+          onClick={() => onRemove(task.id)}
+          className="flex items-center justify-center gap-1.5 px-3 py-2 text-text-subtle hover:text-danger hover:bg-danger-soft text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+          title="Quitar del plan"
+        >
+          <X className="w-3.5 h-3.5" />
+          Quitar
+        </button>
+      )}
+    </>
+  )
+
   return (
     <motion.div
       layout="position"
@@ -121,10 +154,11 @@ export function TaskCard({
       )}
 
       <div className="relative p-4">
-        <div className="flex items-start gap-4">
+        <div className="flex items-start gap-3 md:gap-4">
           <button
             onClick={() => setExpanded(!expanded)}
-            className="mt-1 p-1 text-text-subtle hover:text-text-muted transition-colors"
+            aria-label={expanded ? 'Colapsar' : 'Expandir'}
+            className="-m-1 touch-target text-text-subtle hover:text-text-muted transition-colors flex-shrink-0"
           >
             {expanded ? (
               <ChevronDown className="w-4 h-4" />
@@ -161,7 +195,7 @@ export function TaskCard({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="flex items-center gap-1 text-xs font-mono text-accent hover:text-[var(--accent-hover)] hover:bg-accent-soft px-1.5 py-0.5 rounded-md transition-colors"
+                      className="inline-flex items-center gap-1 text-xs font-mono text-accent hover:text-[var(--accent-hover)] hover:bg-accent-soft px-1.5 py-0.5 rounded-md transition-colors whitespace-nowrap flex-shrink-0"
                       title={task.external_url}
                     >
                       {task.external_key || 'Abrir'}
@@ -201,7 +235,7 @@ export function TaskCard({
               </div>
 
               {task.project && (
-                <div className="flex items-center gap-1 text-xs text-text-subtle flex-shrink-0">
+                <div className="hidden md:flex items-center gap-1 text-xs text-text-subtle flex-shrink-0">
                   {projectTypeLabel(task.project.type)}
                 </div>
               )}
@@ -246,36 +280,14 @@ export function TaskCard({
             </AnimatePresence>
           </div>
 
-          <div className="flex flex-col gap-2 flex-shrink-0">
-            {isRecurring && !isCompleted && onRemove && (
-              <button
-                onClick={() => onRemove(task.id)}
-                className="flex items-center gap-1.5 px-3 py-2 text-text-subtle hover:text-danger hover:bg-danger-soft text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
-                title="Quitar del plan"
-              >
-                <X className="w-3.5 h-3.5" />
-                Quitar
-              </button>
-            )}
-            {!isCompleted && task.status !== 'in_progress' && task.status !== 'paused' && (
-              <button
-                onClick={() => onStartTimer(task.id)}
-                disabled={timerBusy}
-                className="flex items-center gap-1.5 px-3 py-2 bg-accent text-accent-fg text-xs font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors whitespace-nowrap disabled:opacity-60"
-              >
-                Iniciar
-              </button>
-            )}
-            {!isCompleted && (
-              <button
-                onClick={handleComplete}
-                className="flex items-center gap-1.5 px-3 py-2 bg-success-soft text-[var(--success)] text-xs font-medium rounded-lg hover:bg-[var(--success)] hover:text-[var(--success-fg)] transition-colors whitespace-nowrap"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Finalizar
-              </button>
-            )}
+          <div className="hidden md:flex flex-col gap-2 flex-shrink-0">
+            {actionButtons}
           </div>
+        </div>
+
+        {/* Mobile-only actions row */}
+        <div className="md:hidden mt-3 flex flex-row flex-wrap gap-2">
+          {actionButtons}
         </div>
       </div>
 

@@ -12,6 +12,10 @@ import { api } from '@/lib/api'
 import { DailyTask, DailyTaskStatus, Priority, SubtaskStatus, Task, Project } from '@/lib/types'
 import { Plus, Inbox } from 'lucide-react'
 import Link from 'next/link'
+import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
+import { SwipeAction } from '@/components/shared/SwipeAction'
+import confetti from 'canvas-confetti'
 
 const priorityOrder: Record<string, number> = {
   critical: 0,
@@ -143,6 +147,13 @@ export default function TodayPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  const ptr = usePullToRefresh({
+    onRefresh: async () => {
+      setLoading(true)
+      await loadData()
+    },
+  })
 
   const handleUpdateStatus = async (taskId: string, status: DailyTaskStatus) => {
     try {
@@ -400,7 +411,7 @@ export default function TodayPage() {
     return (
       <div>
         <Header title="Today" subtitle="Cargando tu plan diario..." />
-        <div className="p-8 max-w-4xl mx-auto space-y-6">
+        <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
           <SkeletonStats />
           <div className="space-y-3">
             {[1, 2, 3].map((i) => <div key={i} className="animate-slide-in-up" style={{ animationDelay: `${i * 0.06}s` }}><div className="bg-bg-elevated border border-border rounded-xl p-4 h-20 animate-shimmer" /></div>)}
@@ -412,9 +423,10 @@ export default function TodayPage() {
 
   return (
     <div>
+      <PullToRefreshIndicator pull={ptr.pull} refreshing={ptr.refreshing} progress={ptr.progress} />
       <Header title="Today" subtitle="Planifica y ejecuta tu día" />
 
-      <div className="p-8 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
         {tasks.length === 0 && suggested.length === 0 ? (
           <EmptyState
             icon={<Inbox className="w-8 h-8" />}
@@ -482,12 +494,12 @@ export default function TodayPage() {
         ) : (
           <>
             <motion.div
-              className="flex items-center justify-between"
+              className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3"
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25 }}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2 md:gap-3">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-info-soft rounded-lg">
                   <span className="text-xs font-medium text-[var(--info)]">{inProgressCount} en curso</span>
                 </div>
@@ -498,7 +510,7 @@ export default function TodayPage() {
                   <span className="text-xs font-medium text-[var(--success)]">{completedCount} completadas</span>
                 </div>
               </div>
-              <span className="text-sm text-text-subtle">{tasks.length} tareas en total</span>
+              <span className="text-xs md:text-sm text-text-subtle">{tasks.length} tareas en total</span>
             </motion.div>
 
             <motion.div
@@ -509,22 +521,31 @@ export default function TodayPage() {
             >
               {sortedTasks.map((task) => (
                 <motion.div key={task.id} variants={itemVariants}>
-                  <TaskCard
-                    task={task}
-                    activeSessionStartedAt={activeSessionsByTaskId[task.id] ?? null}
-                    timerBusy={timerBusyTaskIds.has(task.id)}
-                    onUpdateStatus={handleUpdateStatus}
-                    onToggleSubtask={handleToggleSubtask}
-                    onAddSubtask={handleAddSubtask}
-                    onUpdateSubtask={handleUpdateSubtask}
-                    onUpdateDescription={handleUpdateDescription}
-                    onUpdateCategory={handleUpdateCategory}
-                    onRemove={handleRemoveFromToday}
-                    onStartTimer={handleStartTimer}
-                    onPauseTimer={handlePauseTimer}
-                    onResumeTimer={handleResumeTimer}
-                    onResetTimer={handleResetTimer}
-                  />
+                  <SwipeAction
+                    disabled={task.status === 'completed'}
+                    onSwipeRight={() => {
+                      handleUpdateStatus(task.id, 'completed')
+                      confetti({ particleCount: 50, spread: 65, origin: { y: 0.7 }, colors: ['#7c3aed', '#34d399', '#60a5fa'] })
+                    }}
+                    onSwipeLeft={() => handleRemoveFromToday(task.id)}
+                  >
+                    <TaskCard
+                      task={task}
+                      activeSessionStartedAt={activeSessionsByTaskId[task.id] ?? null}
+                      timerBusy={timerBusyTaskIds.has(task.id)}
+                      onUpdateStatus={handleUpdateStatus}
+                      onToggleSubtask={handleToggleSubtask}
+                      onAddSubtask={handleAddSubtask}
+                      onUpdateSubtask={handleUpdateSubtask}
+                      onUpdateDescription={handleUpdateDescription}
+                      onUpdateCategory={handleUpdateCategory}
+                      onRemove={handleRemoveFromToday}
+                      onStartTimer={handleStartTimer}
+                      onPauseTimer={handlePauseTimer}
+                      onResumeTimer={handleResumeTimer}
+                      onResetTimer={handleResetTimer}
+                    />
+                  </SwipeAction>
                 </motion.div>
               ))}
             </motion.div>

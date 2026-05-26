@@ -73,7 +73,7 @@ export default function AddTaskPage() {
     <div>
       <Header title="Add Task" subtitle="Crear nueva tarea manual" />
 
-      <div className="p-8 max-w-2xl mx-auto">
+      <div className="p-4 md:p-8 max-w-2xl mx-auto">
         <AnimatePresence>
           {showSuccess && (
             <motion.div
@@ -151,7 +151,7 @@ export default function AddTaskPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Prioridad</label>
               <div className="flex gap-2">

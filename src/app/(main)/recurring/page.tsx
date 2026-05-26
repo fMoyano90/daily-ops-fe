@@ -107,7 +107,7 @@ export default function RecurringPage() {
     return (
       <div>
         <Header title="Recurring" subtitle="Cargando tareas recurrentes..." />
-        <div className="p-8 max-w-4xl mx-auto space-y-6">
+        <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
           <div className="flex justify-between">
             <Skeleton className="h-6 w-40" />
             <Skeleton className="h-9 w-44 rounded-lg" />
@@ -124,7 +124,7 @@ export default function RecurringPage() {
     <div>
       <Header title="Recurring" subtitle="Tareas que se repiten automáticamente" />
 
-      <div className="p-8 max-w-4xl mx-auto space-y-6">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Repeat2 className="w-5 h-5 text-text-subtle" />
