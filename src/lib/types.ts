@@ -107,6 +107,7 @@ export interface DailyTask {
   external_key?: string
   external_url?: string
   category?: string
+  due_date?: string
   meeting_time?: string
   priority: Priority
   status: DailyTaskStatus

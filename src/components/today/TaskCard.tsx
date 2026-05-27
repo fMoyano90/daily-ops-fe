@@ -24,7 +24,7 @@ interface TaskCardProps {
   onAddSubtask?: (taskId: string, title: string) => void
   onUpdateSubtask?: (taskId: string, subtaskId: string, data: { title?: string; priority?: Priority }) => void
   onUpdateDescription?: (taskId: string, description: string) => Promise<void> | void
-  onUpdateCategory?: (taskId: string, data: { category: string | null; meeting_time?: string | null }) => Promise<void> | void
+  onUpdateCategory?: (taskId: string, data: { category: string | null; due_date?: string | null; meeting_time?: string | null }) => Promise<void> | void
   onRemove?: (taskId: string) => void
   onStartTimer: (taskId: string) => void
   onPauseTimer: (taskId: string) => void
@@ -215,6 +215,7 @@ export function TaskCard({
                   <StatusBadge status={task.status} />
                   <CategoryPicker
                     category={task.category}
+                    dueDate={task.due_date}
                     meetingTime={task.meeting_time}
                     editable={!!onUpdateCategory && !!task.task_id}
                     onUpdate={

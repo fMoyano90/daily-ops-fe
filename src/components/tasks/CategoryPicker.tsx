@@ -4,13 +4,14 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { Calendar, Clock, Tag, X } from 'lucide-react'
-import { TASK_CATEGORIES, categoryColor, isMeetingCategory } from '@/lib/categories'
+import { TASK_CATEGORIES, categoryColor, isScheduledCategory } from '@/lib/categories'
 
 interface CategoryPickerProps {
   category?: string | null
+  dueDate?: string | null
   meetingTime?: string | null
   editable?: boolean
-  onUpdate?: (data: { category: string | null; meeting_time?: string | null }) => Promise<void> | void
+  onUpdate?: (data: { category: string | null; due_date?: string | null; meeting_time?: string | null }) => Promise<void> | void
 }
 
 function formatMeetingTime(value: string | null | undefined): string | null {
@@ -21,10 +22,22 @@ function formatMeetingTime(value: string | null | undefined): string | null {
   return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`
 }
 
-export function CategoryPicker({ category, meetingTime, editable = false, onUpdate }: CategoryPickerProps) {
+function formatScheduleDate(value: string | null | undefined): string | null {
+  if (!value) return null
+  return value.split('T')[0]
+}
+
+function formatDisplayDate(value: string | null | undefined): string | null {
+  const date = formatScheduleDate(value)
+  if (!date) return null
+  return new Date(`${date}T00:00:00`).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })
+}
+
+export function CategoryPicker({ category, dueDate, meetingTime, editable = false, onUpdate }: CategoryPickerProps) {
   const [open, setOpen] = useState(false)
   const [draftCategory, setDraftCategory] = useState<string>(category ?? '')
   const [draftCustom, setDraftCustom] = useState<string>('')
+  const [draftDate, setDraftDate] = useState<string>(formatScheduleDate(dueDate) ?? '')
   const [draftTime, setDraftTime] = useState<string>(formatMeetingTime(meetingTime) ?? '')
   const [saving, setSaving] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -80,10 +93,12 @@ export function CategoryPicker({ category, meetingTime, editable = false, onUpda
   useEffect(() => {
     setDraftCategory(category ?? '')
     setDraftCustom(category && !TASK_CATEGORIES.includes(category as never) ? category : '')
+    setDraftDate(formatScheduleDate(dueDate) ?? '')
     setDraftTime(formatMeetingTime(meetingTime) ?? '')
-  }, [category, meetingTime])
+  }, [category, dueDate, meetingTime])
 
-  const displayTime = formatMeetingTime(meetingTime)
+  const displayDate = isScheduledCategory(category) ? formatDisplayDate(dueDate) : null
+  const displayTime = isScheduledCategory(category) ? formatMeetingTime(meetingTime) : null
   const isPredefined = category ? TASK_CATEGORIES.includes(category as never) : false
   const showCustom = draftCategory === '__custom__' || (!!draftCategory && !TASK_CATEGORIES.includes(draftCategory as never))
 
@@ -91,6 +106,7 @@ export function CategoryPicker({ category, meetingTime, editable = false, onUpda
     if (!editable) return
     setDraftCategory(category ?? '')
     setDraftCustom(category && !TASK_CATEGORIES.includes(category as never) ? category : '')
+    setDraftDate(formatScheduleDate(dueDate) ?? '')
     setDraftTime(formatMeetingTime(meetingTime) ?? '')
     setOpen(true)
   }
@@ -105,11 +121,16 @@ export function CategoryPicker({ category, meetingTime, editable = false, onUpda
     } else {
       finalCategory = draftCategory
     }
-    const finalTime = isMeetingCategory(finalCategory) ? (draftTime || null) : null
+    const scheduledSelected = isScheduledCategory(finalCategory)
+    const update: { category: string | null; due_date?: string | null; meeting_time?: string | null } = {
+      category: finalCategory,
+      meeting_time: scheduledSelected ? (draftTime || null) : null,
+    }
+    if (scheduledSelected) update.due_date = draftDate || null
 
     setSaving(true)
     try {
-      await onUpdate({ category: finalCategory, meeting_time: finalTime })
+      await onUpdate(update)
       setOpen(false)
     } catch (err) {
       console.error('Failed to save category:', err)
@@ -129,7 +150,7 @@ export function CategoryPicker({ category, meetingTime, editable = false, onUpda
     }
   }
 
-  const meetingSelected = isMeetingCategory(
+  const scheduledSelected = isScheduledCategory(
     draftCategory === '__custom__' ? draftCustom : draftCategory
   )
 
@@ -200,10 +221,20 @@ export function CategoryPicker({ category, meetingTime, editable = false, onUpda
               />
             )}
 
-            {meetingSelected && (
-              <div className="mt-2 pt-2 border-t border-border">
+            {scheduledSelected && (
+              <div className="mt-2 pt-2 border-t border-border space-y-2">
                 <label className="flex items-center gap-2 text-xs font-medium text-text-muted mb-1.5">
                   <Calendar className="w-3.5 h-3.5" />
+                  Fecha
+                </label>
+                <input
+                  type="date"
+                  value={draftDate}
+                  onChange={(e) => setDraftDate(e.target.value)}
+                  className="w-full text-sm px-2 py-1.5 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-bg-elevated text-text"
+                />
+                <label className="flex items-center gap-2 text-xs font-medium text-text-muted mb-1.5">
+                  <Clock className="w-3.5 h-3.5" />
                   Hora de inicio
                 </label>
                 <input
@@ -257,6 +288,13 @@ export function CategoryPicker({ category, meetingTime, editable = false, onUpda
         <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[var(--info-soft)] text-[var(--info)] border border-[var(--info)]/30 rounded-full">
           <Clock className="w-3 h-3" />
           {displayTime}
+        </span>
+      )}
+
+      {displayDate && (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-bg-muted text-text-muted border border-border rounded-full">
+          <Calendar className="w-3 h-3" />
+          {displayDate}
         </span>
       )}
 

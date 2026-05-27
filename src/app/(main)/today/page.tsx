@@ -327,19 +327,21 @@ export default function TodayPage() {
 
   const handleUpdateCategory = async (
     taskId: string,
-    data: { category: string | null; meeting_time?: string | null }
+    data: { category: string | null; due_date?: string | null; meeting_time?: string | null }
   ) => {
     const payload: Record<string, unknown> = { category: data.category }
+    if (data.due_date !== undefined) payload.due_date = data.due_date
     if (data.meeting_time !== undefined) payload.meeting_time = data.meeting_time
     await api.tasks.update(taskId, payload)
     setTasks((prev) =>
       prev.map((t) =>
         t.task_id === taskId
-          ? {
-              ...t,
-              category: data.category ?? undefined,
-              meeting_time: data.meeting_time ?? undefined,
-            }
+            ? {
+                ...t,
+                category: data.category ?? undefined,
+                due_date: data.due_date !== undefined ? data.due_date ?? undefined : t.due_date,
+                meeting_time: data.meeting_time ?? undefined,
+              }
           : t
       )
     )

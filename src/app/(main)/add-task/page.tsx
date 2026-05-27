@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Header } from '@/components/layout/Header'
 import { api } from '@/lib/api'
 import { Project } from '@/lib/types'
+import { TASK_CATEGORIES, isScheduledCategory } from '@/lib/categories'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
 
@@ -16,6 +17,7 @@ export default function AddTaskPage() {
   const [projectId, setProjectId] = useState('')
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium')
   const [dueDate, setDueDate] = useState('')
+  const [meetingTime, setMeetingTime] = useState('')
   const [externalUrl, setExternalUrl] = useState('')
   const [category, setCategory] = useState('')
   const [showSuccess, setShowSuccess] = useState(false)
@@ -46,6 +48,7 @@ export default function AddTaskPage() {
         source: 'manual',
         priority,
         due_date: dueDate || null,
+        meeting_time: isScheduledCategory(category) ? (meetingTime || null) : null,
         external_url: externalUrl || null,
         category: category || null,
       })
@@ -68,6 +71,7 @@ export default function AddTaskPage() {
 
   const inputClass = 'w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent'
   const labelClass = 'block text-sm font-medium text-text-muted mb-1.5'
+  const scheduledSelected = isScheduledCategory(category)
 
   return (
     <div>
@@ -135,11 +139,9 @@ export default function AddTaskPage() {
             <label className={labelClass}>Categoría (opcional)</label>
             <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputClass}>
               <option value="">Sin categoría</option>
-              <option value="feature">Feature</option>
-              <option value="bug">Bug</option>
-              <option value="improvement">Mejora</option>
-              <option value="task">Tarea</option>
-              <option value="personal">Personal</option>
+              {TASK_CATEGORIES.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
           </div>
 
@@ -171,7 +173,7 @@ export default function AddTaskPage() {
             </div>
 
             <div>
-              <label className={labelClass}>Fecha límite (opcional)</label>
+              <label className={labelClass}>{scheduledSelected ? 'Fecha (opcional)' : 'Fecha límite (opcional)'}</label>
               <input
                 type="date"
                 value={dueDate}
@@ -180,6 +182,18 @@ export default function AddTaskPage() {
               />
             </div>
           </div>
+
+          {scheduledSelected && (
+            <div>
+              <label className={labelClass}>Hora de inicio (opcional)</label>
+              <input
+                type="time"
+                value={meetingTime}
+                onChange={(e) => setMeetingTime(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
             <button

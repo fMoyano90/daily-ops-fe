@@ -1,5 +1,6 @@
 export const TASK_CATEGORIES = [
   'Reunión',
+  'Eventos',
   'Desarrollo',
   'Bug',
   'Investigación',
@@ -10,15 +11,22 @@ export const TASK_CATEGORIES = [
 export type TaskCategory = (typeof TASK_CATEGORIES)[number]
 
 export const MEETING_CATEGORY = 'Reunión'
+export const EVENT_CATEGORY = 'Eventos'
 
 export function isMeetingCategory(category: string | null | undefined): boolean {
   return category === MEETING_CATEGORY
+}
+
+export function isScheduledCategory(category: string | null | undefined): boolean {
+  return category === MEETING_CATEGORY || category === EVENT_CATEGORY
 }
 
 export function categoryColor(category: string | null | undefined): string {
   switch (category) {
     case 'Reunión':
       return 'bg-[var(--info-soft)] text-[var(--info)] border-[var(--info)]/30'
+    case 'Eventos':
+      return 'bg-accent-soft text-accent border-accent/30'
     case 'Desarrollo':
       return 'bg-accent-soft text-accent border-accent/30'
     case 'Bug':

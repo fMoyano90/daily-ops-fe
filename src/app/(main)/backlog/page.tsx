@@ -7,6 +7,7 @@ import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
 import { ProjectBadge } from '@/components/tasks/ProjectBadge'
+import { CategoryPicker } from '@/components/tasks/CategoryPicker'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
@@ -167,6 +168,32 @@ export default function BacklogPage() {
       setEditingProject(null)
     } catch (err) {
       console.error('Failed to update project:', err)
+    }
+  }
+
+  const handleUpdateCategory = async (
+    taskId: string,
+    data: { category: string | null; due_date?: string | null; meeting_time?: string | null }
+  ) => {
+    const payload: Record<string, unknown> = { category: data.category }
+    if (data.due_date !== undefined) payload.due_date = data.due_date
+    if (data.meeting_time !== undefined) payload.meeting_time = data.meeting_time
+    try {
+      await api.tasks.update(taskId, payload)
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                category: data.category ?? undefined,
+                due_date: data.due_date !== undefined ? data.due_date ?? undefined : t.due_date,
+                meeting_time: data.meeting_time ?? undefined,
+              }
+            : t
+        )
+      )
+    } catch (err) {
+      console.error('Failed to update category:', err)
     }
   }
 
@@ -419,7 +446,13 @@ export default function BacklogPage() {
                               )}
                             </button>
                           )}
-                          {task.category && <span className="text-xs text-text-subtle">{task.category}</span>}
+                          <CategoryPicker
+                            category={task.category}
+                            dueDate={task.due_date}
+                            meetingTime={task.meeting_time}
+                            editable={!task.is_recurring}
+                            onUpdate={!task.is_recurring ? (data) => handleUpdateCategory(task.id, data) : undefined}
+                          />
                           {subtasks.length > 0 && <span className="text-xs text-text-subtle">{completedSubtasks}/{subtasks.length} subtareas</span>}
                         </div>
                       </div>
