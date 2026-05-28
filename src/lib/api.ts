@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -354,5 +354,58 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+  },
+
+  goals: {
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<Goal[]>(`/goals${qs}`)
+    },
+    create: (data: Record<string, unknown>) =>
+      fetchApi<Goal>('/goals', { method: 'POST', body: JSON.stringify(data) }),
+    get: (id: string) => fetchApi<Goal>(`/goals/${id}`),
+    update: (id: string, data: Record<string, unknown>) =>
+      fetchApi<Goal>(`/goals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<void>(`/goals/${id}`, { method: 'DELETE' }),
+    complete: (id: string) => fetchApi<Goal>(`/goals/${id}/complete`, { method: 'POST' }),
+    reopen: (id: string) => fetchApi<Goal>(`/goals/${id}/reopen`, { method: 'POST' }),
+    summary: () => fetchApi<GoalSummary>('/goals/summary'),
+    steps: {
+      list: (goalId: string) => fetchApi<GoalStep[]>(`/goals/${goalId}/steps`),
+      create: (goalId: string, data: Record<string, unknown>) =>
+        fetchApi<GoalStep>(`/goals/${goalId}/steps`, {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }),
+      update: (goalId: string, stepId: string, data: Record<string, unknown>) =>
+        fetchApi<GoalStep>(`/goals/${goalId}/steps/${stepId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(data),
+        }),
+      delete: (goalId: string, stepId: string) =>
+        fetchApi<void>(`/goals/${goalId}/steps/${stepId}`, { method: 'DELETE' }),
+      complete: (goalId: string, stepId: string) =>
+        fetchApi<GoalStep>(`/goals/${goalId}/steps/${stepId}/complete`, { method: 'POST' }),
+      reorder: (goalId: string, stepIds: string[]) =>
+        fetchApi<{ updated_count: number }>(`/goals/${goalId}/steps/reorder`, {
+          method: 'PUT',
+          body: JSON.stringify({ step_ids: stepIds }),
+        }),
+    },
+    comments: {
+      list: (goalId: string) => fetchApi<GoalComment[]>(`/goals/${goalId}/comments`),
+      create: (goalId: string, content: string) =>
+        fetchApi<GoalComment>(`/goals/${goalId}/comments`, {
+          method: 'POST',
+          body: JSON.stringify({ content }),
+        }),
+      update: (goalId: string, commentId: string, content: string) =>
+        fetchApi<GoalComment>(`/goals/${goalId}/comments/${commentId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ content }),
+        }),
+      delete: (goalId: string, commentId: string) =>
+        fetchApi<void>(`/goals/${goalId}/comments/${commentId}`, { method: 'DELETE' }),
+    },
   },
 }

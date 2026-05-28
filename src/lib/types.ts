@@ -184,6 +184,59 @@ export interface JiraSyncResult {
   status: string
 }
 
+export type GoalHorizon = 'short' | 'medium' | 'long'
+
+export type GoalStatus = 'active' | 'achieved' | 'paused' | 'abandoned'
+
+export type GoalStepStatus = 'pending' | 'in_progress' | 'completed' | 'blocked'
+
+export interface Goal {
+  id: string
+  project_id: string
+  title: string
+  description?: string
+  horizon: GoalHorizon
+  status: GoalStatus
+  progress: number
+  start_date: string
+  target_date: string
+  completed_at?: string
+  created_at: string
+  updated_at: string
+  project?: Project
+  steps: GoalStep[]
+  comments: GoalComment[]
+  linked_task_ids: string[]
+  anti_goals?: string
+  key_results?: string
+}
+
+export interface GoalStep {
+  id: string
+  goal_id: string
+  title: string
+  status: GoalStepStatus
+  sort_order: number
+  linked_task_id?: string
+  due_date?: string
+  completed_at?: string
+  created_at: string
+}
+
+export interface GoalComment {
+  id: string
+  goal_id: string
+  content: string
+  created_at: string
+  updated_at: string
+}
+
+export interface GoalSummary {
+  short: { count: number; avg_progress: number; nearest_deadline?: string; nearest_goal_title?: string }
+  medium: { count: number; avg_progress: number; nearest_deadline?: string; nearest_goal_title?: string }
+  long: { count: number; avg_progress: number; nearest_deadline?: string; nearest_goal_title?: string }
+}
+
 export interface JiraTestResult {
   ok: boolean
   account_id?: string | null

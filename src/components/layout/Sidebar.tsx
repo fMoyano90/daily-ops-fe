@@ -14,6 +14,7 @@ import {
   Repeat2,
   PanelLeftClose,
   PanelLeftOpen,
+  Target,
 } from 'lucide-react'
 
 const navItems = [
@@ -21,6 +22,7 @@ const navItems = [
   { href: '/backlog', label: 'Backlog', icon: ListTodo },
   { href: '/add-task', label: 'Add Task', icon: PlusCircle },
   { href: '/recurring', label: 'Recurring', icon: Repeat2 },
+  { href: '/goals', label: 'Goals', icon: Target },
   { href: '/history', label: 'History', icon: Clock },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
