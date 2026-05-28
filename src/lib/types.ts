@@ -237,6 +237,51 @@ export interface GoalSummary {
   long: { count: number; avg_progress: number; nearest_deadline?: string; nearest_goal_title?: string }
 }
 
+export type EmotionValence = 'pleasant' | 'neutral' | 'unpleasant'
+
+export type EmotionEnergy = 'low' | 'medium' | 'high'
+
+export type EmotionStrategyHelped = 'yes' | 'partial' | 'no'
+
+export interface EmotionEntry {
+  id: string
+  daily_plan_id?: string | null
+  daily_task_id?: string | null
+  project_id?: string | null
+  emotion: string
+  secondary_emotions: string[]
+  intensity: number
+  valence: EmotionValence
+  energy: EmotionEnergy
+  trigger_type?: string | null
+  trigger_note?: string | null
+  body_sensation?: string | null
+  thought?: string | null
+  need?: string | null
+  response?: string | null
+  regulation_strategy?: string | null
+  strategy_helped?: EmotionStrategyHelped | null
+  note?: string | null
+  occurred_at: string
+  created_at: string
+  updated_at: string
+}
+
+export interface EmotionSummary {
+  start_date: string
+  end_date: string
+  total_entries: number
+  average_intensity: number
+  dominant_emotion?: string | null
+  dominant_trigger?: string | null
+  unpleasant_count: number
+  pleasant_count: number
+  neutral_count: number
+  by_emotion: Record<string, number>
+  by_trigger: Record<string, number>
+  by_valence: Record<string, number>
+}
+
 export interface JiraTestResult {
   ok: boolean
   account_id?: string | null

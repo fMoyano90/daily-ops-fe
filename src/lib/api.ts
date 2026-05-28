@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -406,6 +406,24 @@ export const api = {
         }),
       delete: (goalId: string, commentId: string) =>
         fetchApi<void>(`/goals/${goalId}/comments/${commentId}`, { method: 'DELETE' }),
+    },
+  },
+
+  emotions: {
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<EmotionEntry[]>(`/emotions${qs}`)
+    },
+    today: () => fetchApi<EmotionEntry[]>('/emotions/today'),
+    create: (data: Record<string, unknown>) =>
+      fetchApi<EmotionEntry>('/emotions', { method: 'POST', body: JSON.stringify(data) }),
+    get: (id: string) => fetchApi<EmotionEntry>(`/emotions/${id}`),
+    update: (id: string, data: Record<string, unknown>) =>
+      fetchApi<EmotionEntry>(`/emotions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<void>(`/emotions/${id}`, { method: 'DELETE' }),
+    weeklySummary: (weekStart?: string) => {
+      const qs = weekStart ? `?week_start=${weekStart}` : ''
+      return fetchApi<EmotionSummary>(`/emotions/summary/week${qs}`)
     },
   },
 }

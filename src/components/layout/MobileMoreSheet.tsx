@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
-import { Clock, Settings, Sun, Moon, LogOut, X, Target } from 'lucide-react'
+import { Clock, Settings, Sun, Moon, LogOut, X, Target, SmilePlus } from 'lucide-react'
 import { useThemeStore } from '@/lib/theme'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -99,6 +99,16 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                 >
                   <Target className="w-5 h-5 text-text-muted" />
                   Goals
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/emotions"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
+                >
+                  <SmilePlus className="w-5 h-5 text-text-muted" />
+                  Emotions
                 </Link>
               </li>
               <li>
