@@ -12,8 +12,8 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
 import { Task, Project, Priority, SubtaskStatus } from '@/lib/types'
-import { normalizeExternalUrl, sourceLabel } from '@/lib/utils'
-import { ListFilter, Plus, ExternalLink, CalendarDays, ChevronDown, ChevronRight, CheckCircle2, Circle, Repeat2 } from 'lucide-react'
+import { formatDuration, normalizeExternalUrl, sourceLabel } from '@/lib/utils'
+import { ListFilter, Plus, ExternalLink, CalendarDays, ChevronDown, ChevronRight, CheckCircle2, Circle, Repeat2, Bell } from 'lucide-react'
 import Link from 'next/link'
 
 const listVariants = {
@@ -39,6 +39,8 @@ export default function BacklogPage() {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('')
   const [editingUrl, setEditingUrl] = useState<string | null>(null)
   const [urlValue, setUrlValue] = useState('')
+  const [editingEstimate, setEditingEstimate] = useState<string | null>(null)
+  const [estimateValue, setEstimateValue] = useState('')
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [titleValue, setTitleValue] = useState('')
   const [editingPriority, setEditingPriority] = useState<string | null>(null)
@@ -145,6 +147,20 @@ export default function BacklogPage() {
     }
   }
 
+  const handleSaveEstimate = async (taskId: string) => {
+    const minutes = estimateValue.trim() ? Number(estimateValue) : null
+    if (minutes !== null && Number.isNaN(minutes)) return
+    const estimatedSeconds = minutes !== null ? Math.max(0, minutes) * 60 : null
+    try {
+      await api.tasks.update(taskId, { estimated_seconds: estimatedSeconds })
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, estimated_seconds: estimatedSeconds } : t))
+      setEditingEstimate(null)
+      setEstimateValue('')
+    } catch (err) {
+      console.error('Failed to update estimate:', err)
+    }
+  }
+
   const handleSaveTitle = async (taskId: string) => {
     if (!titleValue.trim()) return
     try {
@@ -179,11 +195,12 @@ export default function BacklogPage() {
 
   const handleUpdateCategory = async (
     taskId: string,
-    data: { category: string | null; due_date?: string | null; meeting_time?: string | null }
+    data: { category: string | null; due_date?: string | null; meeting_time?: string | null; reminder_minutes_before?: number | null }
   ) => {
     const payload: Record<string, unknown> = { category: data.category }
     if (data.due_date !== undefined) payload.due_date = data.due_date
     if (data.meeting_time !== undefined) payload.meeting_time = data.meeting_time
+    if (data.reminder_minutes_before !== undefined) payload.reminder_minutes_before = data.reminder_minutes_before
     try {
       await api.tasks.update(taskId, payload)
       setTasks((prev) =>
@@ -194,6 +211,7 @@ export default function BacklogPage() {
                 category: data.category ?? undefined,
                 due_date: data.due_date !== undefined ? data.due_date ?? undefined : t.due_date,
                 meeting_time: data.meeting_time ?? undefined,
+                reminder_minutes_before: data.reminder_minutes_before ?? undefined,
               }
             : t
         )
@@ -457,9 +475,21 @@ export default function BacklogPage() {
                             category={task.category}
                             dueDate={task.due_date}
                             meetingTime={task.meeting_time}
+                            reminderMinutesBefore={task.reminder_minutes_before}
                             editable={!task.is_recurring}
                             onUpdate={!task.is_recurring ? (data) => handleUpdateCategory(task.id, data) : undefined}
                           />
+                          {task.estimated_seconds != null && task.estimated_seconds > 0 && (
+                            <span className="text-xs px-2 py-0.5 bg-info-soft text-[var(--info)] rounded-full font-mono">
+                              Est. {formatDuration(task.estimated_seconds)}
+                            </span>
+                          )}
+                          {task.reminder_minutes_before != null && task.meeting_time && (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-warning-soft text-[var(--warning)] border border-[var(--warning)]/30 rounded-full font-medium">
+                              <Bell className="w-3 h-3" />
+                              {task.reminder_minutes_before === 0 ? 'A la hora' : task.reminder_minutes_before === 15 ? '15 min' : task.reminder_minutes_before === 30 ? '30 min' : task.reminder_minutes_before === 60 ? '1h' : task.reminder_minutes_before === 180 ? '3h' : `${task.reminder_minutes_before} min`}
+                            </span>
+                          )}
                           {subtasks.length > 0 && <span className="text-xs text-text-subtle">{completedSubtasks}/{subtasks.length} subtareas</span>}
                         </div>
                       </div>
@@ -467,6 +497,39 @@ export default function BacklogPage() {
 
                     {isExpanded && (
                       <div className="mt-4 pt-4 border-t border-border space-y-4">
+                        {!task.is_recurring && (
+                          <div>
+                            <label className="block text-xs font-medium text-text-subtle mb-1.5">Tiempo estimado</label>
+                            {editingEstimate === task.id ? (
+                              <div className="flex gap-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="5"
+                                  value={estimateValue}
+                                  onChange={(e) => setEstimateValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveEstimate(task.id)
+                                    else if (e.key === 'Escape') { setEditingEstimate(null); setEstimateValue('') }
+                                  }}
+                                  placeholder="Minutos"
+                                  className="flex-1 px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
+                                  autoFocus
+                                />
+                                <button onClick={() => handleSaveEstimate(task.id)} className="px-3 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors">Guardar</button>
+                                <button onClick={() => { setEditingEstimate(null); setEstimateValue('') }} className="px-3 py-2 border border-border text-text-muted text-sm font-medium rounded-lg hover:bg-bg-muted transition-colors">Cancelar</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => { setEditingEstimate(task.id); setEstimateValue(task.estimated_seconds ? String(Math.round(task.estimated_seconds / 60)) : '') }}
+                                className="text-sm text-accent hover:text-[var(--accent-hover)] font-medium transition-colors"
+                              >
+                                {task.estimated_seconds ? `Editar estimación (${formatDuration(task.estimated_seconds)})` : 'Añadir estimación'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+
                         <div>
                           <label className="block text-xs font-medium text-text-subtle mb-1.5">URL externa (Jira, etc.)</label>
                           {editingUrl === task.id ? (

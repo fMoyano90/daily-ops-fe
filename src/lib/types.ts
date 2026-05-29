@@ -29,12 +29,14 @@ export interface RecurringTask {
   title: string
   description?: string
   priority: Priority
+  estimated_seconds?: number | null
   category?: string
   meeting_time?: string
   external_url?: string
   tag?: string
   recurrence_type: RecurringTaskType
   recurrence_days: number[] | null
+  reminder_minutes_before?: number | null
   is_active: boolean
   created_at: string
   updated_at: string
@@ -82,9 +84,11 @@ export interface Task {
   status: TaskStatus
   priority: Priority
   due_date?: string
+  estimated_seconds?: number | null
   category?: string
   meeting_time?: string
   tag?: string
+  reminder_minutes_before?: number | null
   subtasks?: Subtask[]
   created_at: string
   updated_at: string
@@ -114,14 +118,17 @@ export interface DailyTask {
   category?: string
   due_date?: string
   meeting_time?: string
+  reminder_minutes_before?: number | null
   priority: Priority
   status: DailyTaskStatus
+  estimated_seconds?: number | null
   total_seconds: number
   live_total_seconds?: number
   sort_order: number
   started_at?: string
   completed_at?: string
   subtasks: DailySubtask[]
+  emotion_entries?: EmotionEntry[]
   project?: Project
   task?: Task
   recurring_task?: RecurringTask
@@ -246,6 +253,8 @@ export type EmotionValence = 'pleasant' | 'neutral' | 'unpleasant'
 
 export type EmotionEnergy = 'low' | 'medium' | 'high'
 
+export type TaskEmotionPhase = 'before' | 'after'
+
 export type EmotionStrategyHelped = 'yes' | 'partial' | 'no'
 
 export interface EmotionEntry {
@@ -253,6 +262,7 @@ export interface EmotionEntry {
   daily_plan_id?: string | null
   daily_task_id?: string | null
   project_id?: string | null
+  task_phase?: TaskEmotionPhase | null
   emotion: string
   secondary_emotions: string[]
   intensity: number

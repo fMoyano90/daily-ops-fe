@@ -8,11 +8,21 @@ import { PriorityBadge } from '@/components/tasks/PriorityBadge'
 import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
 import { RecurringTask, RecurringInstance, Project } from '@/lib/types'
-import { normalizeExternalUrl } from '@/lib/utils'
-import { Plus, Repeat2, Trash2, Pencil, History, CheckCircle2, XCircle, Clock, ExternalLink, Tag } from 'lucide-react'
+import { formatDuration, normalizeExternalUrl } from '@/lib/utils'
+import { Plus, Repeat2, Trash2, Pencil, History, CheckCircle2, XCircle, Clock, ExternalLink, Tag, Bell } from 'lucide-react'
 import { RecurringTaskForm } from '@/components/recurring/RecurringTaskForm'
 
 const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+function formatReminderLabel(minutes: number | null | undefined): string | null {
+  if (minutes == null) return null
+  if (minutes === 0) return 'A la hora'
+  if (minutes === 15) return '15 min antes'
+  if (minutes === 30) return '30 min antes'
+  if (minutes === 60) return '1h antes'
+  if (minutes === 180) return '3h antes'
+  return `${minutes} min antes`
+}
 
 function formatRecurrence(task: RecurringTask): string {
   if (task.recurrence_type === 'daily') return 'Todos los días'
@@ -171,6 +181,7 @@ export default function RecurringPage() {
               const isExpanded = expandedHistory === task.id
               const meetingTime = formatMeetingTime(task.meeting_time)
               const safeExternalUrl = normalizeExternalUrl(task.external_url)
+              const reminderLabel = formatReminderLabel(task.reminder_minutes_before)
 
               return (
                 <motion.div
@@ -200,10 +211,21 @@ export default function RecurringPage() {
                           <span className="text-xs px-2 py-0.5 bg-accent-soft text-accent rounded-full font-medium">
                             {formatRecurrence(task)}
                           </span>
+                          {task.estimated_seconds != null && task.estimated_seconds > 0 && (
+                            <span className="text-xs px-2 py-0.5 bg-info-soft text-[var(--info)] rounded-full font-mono">
+                              Est. {formatDuration(task.estimated_seconds)}
+                            </span>
+                          )}
                           {meetingTime && (
                             <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-[var(--info-soft)] text-[var(--info)] border border-[var(--info)]/30 rounded-full font-medium">
                               <Clock className="w-3 h-3" />
                               {meetingTime}
+                            </span>
+                          )}
+                          {reminderLabel && (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-warning-soft text-[var(--warning)] border border-[var(--warning)]/30 rounded-full font-medium">
+                              <Bell className="w-3 h-3" />
+                              {reminderLabel}
                             </span>
                           )}
                           {task.tag && (

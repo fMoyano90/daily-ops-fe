@@ -8,6 +8,7 @@ import { RecurringTask, Project, Priority } from '@/lib/types'
 import { TASK_CATEGORIES } from '@/lib/categories'
 import { normalizeExternalUrl } from '@/lib/utils'
 import { X } from 'lucide-react'
+import { ReminderPicker } from '@/components/tasks/ReminderPicker'
 
 const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const dayShort = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -23,8 +24,10 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
   const [description, setDescription] = useState(task?.description || '')
   const [projectId, setProjectId] = useState(task?.project_id || '')
   const [priority, setPriority] = useState<Priority>(task?.priority || 'medium')
+  const [estimatedMinutes, setEstimatedMinutes] = useState(task?.estimated_seconds ? String(Math.round(task.estimated_seconds / 60)) : '')
   const [category, setCategory] = useState(task?.category || '')
   const [meetingTime, setMeetingTime] = useState(task?.meeting_time?.slice(0, 5) || '')
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(task?.reminder_minutes_before ?? null)
   const [externalUrl, setExternalUrl] = useState(task?.external_url || '')
   const [tag, setTag] = useState(task?.tag || '')
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>(task?.recurrence_type || 'weekly')
@@ -55,12 +58,14 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
         title,
         description: description || null,
         priority,
+        estimated_seconds: estimatedMinutes ? Number(estimatedMinutes) * 60 : null,
         category: category || null,
         meeting_time: meetingTime || null,
         external_url: normalizedExternalUrl,
         tag: tag || null,
         recurrence_type: recurrenceType,
         recurrence_days: recurrenceType === 'daily' ? null : recurrenceDays,
+        reminder_minutes_before: meetingTime ? reminderMinutes : null,
       }
 
       if (task) {
@@ -150,6 +155,10 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
           </div>
         </div>
 
+        {meetingTime && (
+          <ReminderPicker value={reminderMinutes} onChange={setReminderMinutes} />
+        )}
+
         <div>
           <label className="block text-sm font-medium text-text-muted mb-1.5">
             Enlace
@@ -225,6 +234,22 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="recurring-estimated-minutes" className="block text-sm font-medium text-text-muted mb-1.5">
+            Tiempo estimado por ejecución (min)
+          </label>
+          <input
+            id="recurring-estimated-minutes"
+            type="number"
+            min="0"
+            step="5"
+            value={estimatedMinutes}
+            onChange={(e) => setEstimatedMinutes(e.target.value)}
+            placeholder="30"
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
+          />
         </div>
 
         <div>

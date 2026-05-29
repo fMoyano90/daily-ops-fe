@@ -7,11 +7,12 @@ import { TaskCard } from '@/components/today/TaskCard'
 import { DayCloser } from '@/components/today/DayCloser'
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
+import { Modal } from '@/components/shared/Modal'
 import { SkeletonStats } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
-import { DailyTask, DailyTaskStatus, Priority, SubtaskStatus, Task, Project } from '@/lib/types'
+import { DailyTask, DailyTaskStatus, EmotionEnergy, EmotionEntry, EmotionValence, Priority, SubtaskStatus, Task, Project, TaskEmotionPhase } from '@/lib/types'
 import { normalizeExternalUrl } from '@/lib/utils'
-import { Plus, Inbox, Clock, ExternalLink, Repeat2, Tag } from 'lucide-react'
+import { Plus, Inbox, Clock, ExternalLink, Repeat2, Tag, Bell } from 'lucide-react'
 import Link from 'next/link'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
@@ -35,6 +36,21 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 }
 
+const taskEmotionOptions: Array<{ value: string; label: string; valence: EmotionValence }> = [
+  { value: 'calma', label: 'Calma', valence: 'pleasant' },
+  { value: 'alegria', label: 'Alegría', valence: 'pleasant' },
+  { value: 'ansiedad', label: 'Ansiedad', valence: 'unpleasant' },
+  { value: 'frustracion', label: 'Frustración', valence: 'unpleasant' },
+  { value: 'cansancio', label: 'Cansancio', valence: 'neutral' },
+  { value: 'enfoque', label: 'Enfoque', valence: 'pleasant' },
+]
+
+type PendingEmotionAction = {
+  taskId: string
+  phase: TaskEmotionPhase
+  next: 'start' | 'complete'
+}
+
 function formatMeetingTime(value: string | null | undefined): string | null {
   if (!value) return null
   const [h, m] = value.split(':')
@@ -52,6 +68,7 @@ export default function TodayPage() {
   const [addingTaskId, setAddingTaskId] = useState<string | null>(null)
   const [activeSessionsByTaskId, setActiveSessionsByTaskId] = useState<Record<string, string>>({})
   const [timerBusyTaskIds, setTimerBusyTaskIds] = useState<Set<string>>(new Set())
+  const [pendingEmotionAction, setPendingEmotionAction] = useState<PendingEmotionAction | null>(null)
 
   const setTimerBusy = (taskId: string, busy: boolean) => {
     setTimerBusyTaskIds((prev) => {
@@ -163,32 +180,50 @@ export default function TodayPage() {
     },
   })
 
+  const hasTaskEmotion = (taskId: string, phase: TaskEmotionPhase) => {
+    const task = tasks.find((t) => t.id === taskId)
+    return !!task?.emotion_entries?.some((entry) => entry.task_phase === phase)
+  }
+
+  const performCompleteTask = async (taskId: string, emotionEntry?: EmotionEntry) => {
+    const task = tasks.find((t) => t.id === taskId)
+    const updatedTask = await api.dailyTasks.complete(taskId)
+    if (task?.task_id) {
+      await api.tasks.update(task.task_id, { status: 'done' })
+    }
+    const mergedTask = emotionEntry
+      ? { ...updatedTask, emotion_entries: [...(updatedTask.emotion_entries || []), emotionEntry] }
+      : updatedTask
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? mergedTask : t))
+    )
+    confetti({ particleCount: 50, spread: 65, origin: { y: 0.7 }, colors: ['#7c3aed', '#34d399', '#60a5fa'] })
+  }
+
   const handleUpdateStatus = async (taskId: string, status: DailyTaskStatus) => {
     try {
-      const task = tasks.find((t) => t.id === taskId)
-
       if (status === 'completed') {
-        await api.dailyTasks.complete(taskId)
-        if (task?.task_id) {
-          await api.tasks.update(task.task_id, { status: 'done' })
+        if (!hasTaskEmotion(taskId, 'after')) {
+          setPendingEmotionAction({ taskId, phase: 'after', next: 'complete' })
+          return
         }
+        await performCompleteTask(taskId)
       } else {
         await api.dailyTasks.update(taskId, { status })
-      }
-
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId
-            ? { ...t, status, completedAt: status === 'completed' ? new Date().toISOString() : t.completed_at }
-            : t
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId
+              ? { ...t, status }
+              : t
+          )
         )
-      )
+      }
     } catch (err) {
       console.error('Failed to update task status:', err)
     }
   }
 
-  const handleStartTimer = async (taskId: string) => {
+  const performStartTimer = async (taskId: string) => {
     setTimerBusy(taskId, true)
     try {
       const res = await api.timers.start(taskId)
@@ -201,6 +236,14 @@ export default function TodayPage() {
     } finally {
       setTimerBusy(taskId, false)
     }
+  }
+
+  const handleStartTimer = async (taskId: string) => {
+    if (!hasTaskEmotion(taskId, 'before')) {
+      setPendingEmotionAction({ taskId, phase: 'before', next: 'start' })
+      return
+    }
+    await performStartTimer(taskId)
   }
 
   const handlePauseTimer = async (taskId: string) => {
@@ -262,6 +305,45 @@ export default function TodayPage() {
       console.error('Failed to reset timer:', err)
     } finally {
       setTimerBusy(taskId, false)
+    }
+  }
+
+  const continuePendingEmotionAction = async (action: PendingEmotionAction, emotionEntry?: EmotionEntry) => {
+    setPendingEmotionAction(null)
+    if (action.next === 'start') {
+      await performStartTimer(action.taskId)
+    } else {
+      await performCompleteTask(action.taskId, emotionEntry)
+    }
+  }
+
+  const handleSaveTaskEmotion = async (data: {
+    emotion: string
+    valence: EmotionValence
+    intensity: number
+    energy: EmotionEnergy
+    note?: string | null
+  }) => {
+    if (!pendingEmotionAction) return
+    const action = pendingEmotionAction
+    const task = tasks.find((t) => t.id === action.taskId)
+    try {
+      const entry = await api.emotions.create({
+        daily_plan_id: planId,
+        daily_task_id: action.taskId,
+        project_id: task?.project?.id ?? task?.task?.project_id ?? task?.recurring_task?.project_id ?? null,
+        task_phase: action.phase,
+        emotion: data.emotion,
+        valence: data.valence,
+        intensity: data.intensity,
+        energy: data.energy,
+        trigger_type: 'tarea',
+        secondary_emotions: [],
+        note: data.note || null,
+      })
+      await continuePendingEmotionAction(action, entry)
+    } catch (err) {
+      console.error('Failed to save task emotion:', err)
     }
   }
 
@@ -335,11 +417,12 @@ export default function TodayPage() {
 
   const handleUpdateCategory = async (
     taskId: string,
-    data: { category: string | null; due_date?: string | null; meeting_time?: string | null }
+    data: { category: string | null; due_date?: string | null; meeting_time?: string | null; reminder_minutes_before?: number | null }
   ) => {
     const payload: Record<string, unknown> = { category: data.category }
     if (data.due_date !== undefined) payload.due_date = data.due_date
     if (data.meeting_time !== undefined) payload.meeting_time = data.meeting_time
+    if (data.reminder_minutes_before !== undefined) payload.reminder_minutes_before = data.reminder_minutes_before
     await api.tasks.update(taskId, payload)
     setTasks((prev) =>
       prev.map((t) =>
@@ -349,6 +432,7 @@ export default function TodayPage() {
                 category: data.category ?? undefined,
                 due_date: data.due_date !== undefined ? data.due_date ?? undefined : t.due_date,
                 meeting_time: data.meeting_time ?? undefined,
+                reminder_minutes_before: data.reminder_minutes_before ?? undefined,
               }
           : t
       )
@@ -416,6 +500,7 @@ export default function TodayPage() {
     if (aDone !== bDone) return aDone - bDone
     return priorityOrder[a.priority] - priorityOrder[b.priority]
   })
+  const pendingEmotionTask = pendingEmotionAction ? tasks.find((t) => t.id === pendingEmotionAction.taskId) : null
 
   if (loading) {
     return (
@@ -465,6 +550,9 @@ export default function TodayPage() {
                 const isRecurringSuggestion = task.id.startsWith('recurring_')
                 const meetingTime = formatMeetingTime(task.meeting_time)
                 const safeExternalUrl = normalizeExternalUrl(task.external_url)
+                const reminderLabel = task.reminder_minutes_before != null
+                  ? (task.reminder_minutes_before === 0 ? 'A la hora' : task.reminder_minutes_before === 15 ? '15 min' : task.reminder_minutes_before === 30 ? '30 min' : task.reminder_minutes_before === 60 ? '1h' : task.reminder_minutes_before === 180 ? '3h' : `${task.reminder_minutes_before} min`)
+                  : null
                 return (
                   <motion.div
                     key={task.id}
@@ -486,6 +574,12 @@ export default function TodayPage() {
                         <span className="inline-flex items-center gap-1 text-xs text-[var(--info)] bg-[var(--info-soft)] px-1.5 py-0.5 rounded-full flex-shrink-0">
                           <Clock className="w-3 h-3" />
                           {meetingTime}
+                        </span>
+                      )}
+                      {reminderLabel && (
+                        <span className="inline-flex items-center gap-1 text-xs text-[var(--warning)] bg-warning-soft px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          <Bell className="w-3 h-3" />
+                          {reminderLabel}
                         </span>
                       )}
                       {task.tag && (
@@ -565,10 +659,7 @@ export default function TodayPage() {
                 <motion.div key={task.id} variants={itemVariants}>
                   <SwipeAction
                     disabled={task.status === 'completed'}
-                    onSwipeRight={() => {
-                      handleUpdateStatus(task.id, 'completed')
-                      confetti({ particleCount: 50, spread: 65, origin: { y: 0.7 }, colors: ['#7c3aed', '#34d399', '#60a5fa'] })
-                    }}
+                    onSwipeRight={() => handleUpdateStatus(task.id, 'completed')}
                     onSwipeLeft={() => handleRemoveFromToday(task.id)}
                   >
                     <TaskCard
@@ -620,6 +711,9 @@ export default function TodayPage() {
                       const alreadyInPlan = tasks.some((t) => t.task_id === task.id || t.recurring_task_id === recurringId)
                       const meetingTime = formatMeetingTime(task.meeting_time)
                       const safeExternalUrl = normalizeExternalUrl(task.external_url)
+                      const reminderLabel = task.reminder_minutes_before != null
+                        ? (task.reminder_minutes_before === 0 ? 'A la hora' : task.reminder_minutes_before === 15 ? '15 min' : task.reminder_minutes_before === 30 ? '30 min' : task.reminder_minutes_before === 60 ? '1h' : task.reminder_minutes_before === 180 ? '3h' : `${task.reminder_minutes_before} min`)
+                        : null
 
                       return (
                         <motion.div
@@ -648,6 +742,12 @@ export default function TodayPage() {
                               <span className="inline-flex items-center gap-1 text-xs text-[var(--info)] bg-[var(--info-soft)] px-1.5 py-0.5 rounded-full flex-shrink-0">
                                 <Clock className="w-3 h-3" />
                                 {meetingTime}
+                              </span>
+                            )}
+                            {reminderLabel && (
+                              <span className="inline-flex items-center gap-1 text-xs text-[var(--warning)] bg-warning-soft px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                <Bell className="w-3 h-3" />
+                                {reminderLabel}
                               </span>
                             )}
                             {task.tag && (
@@ -711,6 +811,128 @@ export default function TodayPage() {
           </>
         )}
       </div>
+
+      {pendingEmotionAction && pendingEmotionTask && (
+        <TaskEmotionModal
+          taskTitle={pendingEmotionTask.title_snapshot}
+          phase={pendingEmotionAction.phase}
+          onClose={() => setPendingEmotionAction(null)}
+          onSkip={() => continuePendingEmotionAction(pendingEmotionAction)}
+          onSave={handleSaveTaskEmotion}
+        />
+      )}
     </div>
+  )
+}
+
+function TaskEmotionModal({
+  taskTitle,
+  phase,
+  onClose,
+  onSkip,
+  onSave,
+}: {
+  taskTitle: string
+  phase: TaskEmotionPhase
+  onClose: () => void
+  onSkip: () => void
+  onSave: (data: { emotion: string; valence: EmotionValence; intensity: number; energy: EmotionEnergy; note?: string | null }) => Promise<void>
+}) {
+  const [emotion, setEmotion] = useState('calma')
+  const [valence, setValence] = useState<EmotionValence>('pleasant')
+  const [intensity, setIntensity] = useState(5)
+  const [energy, setEnergy] = useState<EmotionEnergy>('medium')
+  const [note, setNote] = useState('')
+  const [saving, setSaving] = useState(false)
+  const title = phase === 'before' ? 'Antes de empezar' : 'Después de terminar'
+
+  const selectEmotion = (value: string) => {
+    const option = taskEmotionOptions.find((item) => item.value === value)
+    setEmotion(value)
+    if (option) setValence(option.valence)
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      await onSave({ emotion, valence, intensity, energy, note: note.trim() || null })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Modal isOpen onClose={onClose} maxWidth="max-w-md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-accent">{title}</p>
+          <h2 className="text-lg font-semibold text-text mt-1">{taskTitle}</h2>
+          <p className="text-sm text-text-muted mt-1">Registra una señal rápida para detectar patrones reales.</p>
+        </div>
+
+        <fieldset>
+          <legend className="text-sm font-medium text-text mb-2">Emoción</legend>
+          <div className="flex flex-wrap gap-2">
+            {taskEmotionOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => selectEmotion(option.value)}
+                aria-pressed={emotion === option.value}
+                className={`px-3 py-2 rounded-full border text-sm font-medium transition-colors ${
+                  emotion === option.value
+                    ? 'bg-accent-soft border-accent text-accent'
+                    : 'border-border text-text-muted hover:text-text hover:bg-bg-muted'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label htmlFor="task-emotion-energy" className="block text-xs font-medium text-text-subtle mb-1">Energía</label>
+            <select id="task-emotion-energy" value={energy} onChange={(e) => setEnergy(e.target.value as EmotionEnergy)} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text focus:outline-none focus:ring-2 focus:ring-accent">
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+            </select>
+          </div>
+          <div>
+            <label htmlFor="task-emotion-valence" className="block text-xs font-medium text-text-subtle mb-1">Valencia</label>
+            <select id="task-emotion-valence" value={valence} onChange={(e) => setValence(e.target.value as EmotionValence)} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text focus:outline-none focus:ring-2 focus:ring-accent">
+              <option value="pleasant">Agradable</option>
+              <option value="neutral">Neutra</option>
+              <option value="unpleasant">Desagradable</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="task-emotion-intensity" className="flex items-center justify-between text-sm font-medium text-text mb-2">
+            Intensidad
+            <span className="font-mono text-accent">{intensity}/10</span>
+          </label>
+          <input id="task-emotion-intensity" type="range" min="1" max="10" value={intensity} onChange={(e) => setIntensity(Number(e.target.value))} className="w-full accent-[var(--accent)]" />
+        </div>
+
+        <div>
+          <label htmlFor="task-emotion-note" className="block text-sm font-medium text-text mb-1">Nota opcional</label>
+          <textarea id="task-emotion-note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} maxLength={500} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent resize-none" placeholder="¿Qué noto ahora?" />
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <button type="button" onClick={onSkip} disabled={saving} className="px-4 py-2 text-sm font-medium text-text-muted hover:text-text hover:bg-bg-muted rounded-lg transition-colors disabled:opacity-60">
+            Omitir
+          </button>
+          <button type="submit" disabled={saving} className="px-4 py-2 bg-accent text-accent-fg text-sm font-semibold rounded-lg hover:bg-[var(--accent-hover)] disabled:opacity-60 transition-colors">
+            {saving ? 'Guardando...' : phase === 'before' ? 'Guardar e iniciar' : 'Guardar y finalizar'}
+          </button>
+        </div>
+      </form>
+    </Modal>
   )
 }

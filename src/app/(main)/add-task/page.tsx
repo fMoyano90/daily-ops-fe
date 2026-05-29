@@ -9,6 +9,7 @@ import { TASK_CATEGORIES, isScheduledCategory } from '@/lib/categories'
 import { normalizeExternalUrl } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
+import { ReminderPicker } from '@/components/tasks/ReminderPicker'
 
 export default function AddTaskPage() {
   const router = useRouter()
@@ -17,10 +18,12 @@ export default function AddTaskPage() {
   const [description, setDescription] = useState('')
   const [projectId, setProjectId] = useState('')
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium')
+  const [estimatedMinutes, setEstimatedMinutes] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [meetingTime, setMeetingTime] = useState('')
   const [externalUrl, setExternalUrl] = useState('')
   const [category, setCategory] = useState('')
+  const [reminderMinutes, setReminderMinutes] = useState<number | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -54,10 +57,12 @@ export default function AddTaskPage() {
         description: description || null,
         source: 'manual',
         priority,
+        estimated_seconds: estimatedMinutes ? Number(estimatedMinutes) * 60 : null,
         due_date: dueDate || null,
         meeting_time: isScheduledCategory(category) ? (meetingTime || null) : null,
         external_url: normalizedExternalUrl,
         category: category || null,
+        reminder_minutes_before: isScheduledCategory(category) && meetingTime ? reminderMinutes : null,
       })
       setShowSuccess(true)
       setTimeout(() => router.push('/backlog'), 1500)
@@ -180,6 +185,22 @@ export default function AddTaskPage() {
             </div>
 
             <div>
+              <label className={labelClass}>Tiempo estimado (min)</label>
+              <input
+                type="number"
+                min="0"
+                step="5"
+                value={estimatedMinutes}
+                onChange={(e) => setEstimatedMinutes(e.target.value)}
+                placeholder="45"
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+            <div>
               <label className={labelClass}>{scheduledSelected ? 'Fecha (opcional)' : 'Fecha límite (opcional)'}</label>
               <input
                 type="date"
@@ -200,6 +221,10 @@ export default function AddTaskPage() {
                 className={inputClass}
               />
             </div>
+          )}
+
+          {scheduledSelected && meetingTime && (
+            <ReminderPicker value={reminderMinutes} onChange={setReminderMinutes} />
           )}
 
           <div className="flex gap-3 pt-4">

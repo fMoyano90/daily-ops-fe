@@ -3,15 +3,17 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { Calendar, Clock, Tag, X } from 'lucide-react'
+import { Calendar, Clock, Tag, X, Bell } from 'lucide-react'
 import { TASK_CATEGORIES, categoryColor, isScheduledCategory } from '@/lib/categories'
+import { REMINDER_OPTIONS } from './ReminderPicker'
 
 interface CategoryPickerProps {
   category?: string | null
   dueDate?: string | null
   meetingTime?: string | null
+  reminderMinutesBefore?: number | null
   editable?: boolean
-  onUpdate?: (data: { category: string | null; due_date?: string | null; meeting_time?: string | null }) => Promise<void> | void
+  onUpdate?: (data: { category: string | null; due_date?: string | null; meeting_time?: string | null; reminder_minutes_before?: number | null }) => Promise<void> | void
 }
 
 function formatMeetingTime(value: string | null | undefined): string | null {
@@ -33,12 +35,13 @@ function formatDisplayDate(value: string | null | undefined): string | null {
   return new Date(`${date}T00:00:00`).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })
 }
 
-export function CategoryPicker({ category, dueDate, meetingTime, editable = false, onUpdate }: CategoryPickerProps) {
+export function CategoryPicker({ category, dueDate, meetingTime, reminderMinutesBefore, editable = false, onUpdate }: CategoryPickerProps) {
   const [open, setOpen] = useState(false)
   const [draftCategory, setDraftCategory] = useState<string>(category ?? '')
   const [draftCustom, setDraftCustom] = useState<string>('')
   const [draftDate, setDraftDate] = useState<string>(formatScheduleDate(dueDate) ?? '')
   const [draftTime, setDraftTime] = useState<string>(formatMeetingTime(meetingTime) ?? '')
+  const [draftReminder, setDraftReminder] = useState<number | null>(reminderMinutesBefore ?? null)
   const [saving, setSaving] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
@@ -95,7 +98,8 @@ export function CategoryPicker({ category, dueDate, meetingTime, editable = fals
     setDraftCustom(category && !TASK_CATEGORIES.includes(category as never) ? category : '')
     setDraftDate(formatScheduleDate(dueDate) ?? '')
     setDraftTime(formatMeetingTime(meetingTime) ?? '')
-  }, [category, dueDate, meetingTime])
+    setDraftReminder(reminderMinutesBefore ?? null)
+  }, [category, dueDate, meetingTime, reminderMinutesBefore])
 
   const displayDate = isScheduledCategory(category) ? formatDisplayDate(dueDate) : null
   const displayTime = formatMeetingTime(meetingTime)
@@ -108,6 +112,7 @@ export function CategoryPicker({ category, dueDate, meetingTime, editable = fals
     setDraftCustom(category && !TASK_CATEGORIES.includes(category as never) ? category : '')
     setDraftDate(formatScheduleDate(dueDate) ?? '')
     setDraftTime(formatMeetingTime(meetingTime) ?? '')
+    setDraftReminder(reminderMinutesBefore ?? null)
     setOpen(true)
   }
 
@@ -122,9 +127,10 @@ export function CategoryPicker({ category, dueDate, meetingTime, editable = fals
       finalCategory = draftCategory
     }
     const scheduledSelected = isScheduledCategory(finalCategory)
-    const update: { category: string | null; due_date?: string | null; meeting_time?: string | null } = {
+    const update: { category: string | null; due_date?: string | null; meeting_time?: string | null; reminder_minutes_before?: number | null } = {
       category: finalCategory,
       meeting_time: scheduledSelected ? (draftTime || null) : null,
+      reminder_minutes_before: scheduledSelected && draftTime ? draftReminder : null,
     }
     if (scheduledSelected) update.due_date = draftDate || null
 
@@ -243,6 +249,21 @@ export function CategoryPicker({ category, dueDate, meetingTime, editable = fals
                   onChange={(e) => setDraftTime(e.target.value)}
                   className="w-full text-sm px-2 py-1.5 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-bg-elevated text-text"
                 />
+                <label className="flex items-center gap-2 text-xs font-medium text-text-muted mb-1.5">
+                  <Bell className="w-3.5 h-3.5" />
+                  Recordatorio
+                </label>
+                <select
+                  value={draftReminder ?? ''}
+                  onChange={(e) => setDraftReminder(e.target.value === '' ? null : Number(e.target.value))}
+                  className="w-full text-sm px-2 py-1.5 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-accent bg-bg-elevated text-text"
+                >
+                  {REMINDER_OPTIONS.map((opt) => (
+                    <option key={opt.label} value={opt.value ?? ''}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 

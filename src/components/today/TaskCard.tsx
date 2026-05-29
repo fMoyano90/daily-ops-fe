@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import confetti from 'canvas-confetti'
 import { DailyTask, DailyTaskStatus, Priority } from '@/lib/types'
 import { ProjectBadge } from '@/components/tasks/ProjectBadge'
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
@@ -13,7 +12,7 @@ import { SubtaskList } from '@/components/today/SubtaskList'
 import { TaskComments } from '@/components/today/TaskComments'
 import { Modal } from '@/components/shared/Modal'
 import { formatDuration, normalizeExternalUrl, projectTypeLabel } from '@/lib/utils'
-import { ChevronDown, ChevronRight, CheckCircle2, Repeat2, X, FileText, RotateCcw, AlertTriangle, ExternalLink, Tag, Plus } from 'lucide-react'
+import { ChevronDown, ChevronRight, CheckCircle2, Repeat2, X, FileText, RotateCcw, AlertTriangle, ExternalLink, Tag, Plus, Bell } from 'lucide-react'
 
 interface TaskCardProps {
   task: DailyTask
@@ -24,7 +23,7 @@ interface TaskCardProps {
   onAddSubtask?: (taskId: string, title: string) => void
   onUpdateSubtask?: (taskId: string, subtaskId: string, data: { title?: string; priority?: Priority }) => void
   onUpdateDescription?: (taskId: string, description: string) => Promise<void> | void
-  onUpdateCategory?: (taskId: string, data: { category: string | null; due_date?: string | null; meeting_time?: string | null }) => Promise<void> | void
+  onUpdateCategory?: (taskId: string, data: { category: string | null; due_date?: string | null; meeting_time?: string | null; reminder_minutes_before?: number | null }) => Promise<void> | void
   onRemove?: (taskId: string) => void
   onStartTimer: (taskId: string) => void
   onPauseTimer: (taskId: string) => void
@@ -61,6 +60,9 @@ export function TaskCard({
   const hasDescription = !!task.description && task.description.trim().length > 0
   const canEditDescription = !!onUpdateDescription && !!task.task_id
   const safeExternalUrl = normalizeExternalUrl(task.external_url)
+  const emotionBefore = task.emotion_entries?.find((entry) => entry.task_phase === 'before')
+  const emotionAfter = task.emotion_entries?.find((entry) => entry.task_phase === 'after')
+  const displaySeconds = task.live_total_seconds ?? task.total_seconds
 
   const openDescription = () => {
     setDescriptionDraft(task.description ?? '')
@@ -93,7 +95,6 @@ export function TaskCard({
   const handleComplete = () => {
     if (isCompleted) return
     onUpdateStatus(task.id, 'completed')
-    confetti({ particleCount: 50, spread: 65, origin: { y: 0.7 }, colors: ['#7c3aed', '#34d399', '#60a5fa'] })
   }
 
   const handleResetRequest = () => setResetConfirmOpen(true)
@@ -224,6 +225,7 @@ export function TaskCard({
                     category={task.category}
                     dueDate={task.due_date}
                     meetingTime={task.meeting_time}
+                    reminderMinutesBefore={task.reminder_minutes_before}
                     editable={!!onUpdateCategory && !!task.task_id}
                     onUpdate={
                       onUpdateCategory && task.task_id
@@ -231,14 +233,32 @@ export function TaskCard({
                         : undefined
                     }
                   />
-                  {(() => {
-                    const displaySeconds = task.live_total_seconds ?? task.total_seconds
-                    return displaySeconds > 0 && (
-                      <span className="text-xs text-text-subtle font-mono">
-                        {formatDuration(displaySeconds)}
-                      </span>
-                    )
-                  })()}
+                  {task.estimated_seconds != null && task.estimated_seconds > 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-info-soft text-[var(--info)] rounded-full font-mono">
+                      Est. {formatDuration(task.estimated_seconds)}
+                    </span>
+                  )}
+                  {task.reminder_minutes_before != null && task.meeting_time && (
+                    <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-warning-soft text-[var(--warning)] border border-[var(--warning)]/30 rounded-full font-medium">
+                      <Bell className="w-3 h-3" />
+                      {task.reminder_minutes_before === 0 ? 'A la hora' : task.reminder_minutes_before === 15 ? '15 min' : task.reminder_minutes_before === 30 ? '30 min' : task.reminder_minutes_before === 60 ? '1h' : task.reminder_minutes_before === 180 ? '3h' : `${task.reminder_minutes_before} min`}
+                    </span>
+                  )}
+                  {displaySeconds > 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-bg-muted text-text-subtle rounded-full font-mono">
+                      Real {formatDuration(displaySeconds)}
+                    </span>
+                  )}
+                  {emotionBefore && (
+                    <span className="text-xs px-2 py-0.5 bg-warning-soft text-[var(--warning)] rounded-full">
+                      Antes: {emotionBefore.emotion} · {emotionBefore.energy}
+                    </span>
+                  )}
+                  {emotionAfter && (
+                    <span className="text-xs px-2 py-0.5 bg-success-soft text-[var(--success)] rounded-full">
+                      Después: {emotionAfter.emotion} · {emotionAfter.energy}
+                    </span>
+                  )}
                 </div>
 
                 {isRecurring && !expanded && !isCompleted && (
