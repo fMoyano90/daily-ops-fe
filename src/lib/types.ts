@@ -523,6 +523,268 @@ export interface NutritionDaySummary {
   avg_fat_g?: number | null
 }
 
+export type ConditionCategory = 'cardiovascular' | 'metabolic' | 'dental' | 'mental' | 'respiratory' | 'other'
+
+export type ConditionStatus = 'active' | 'monitoring' | 'resolved'
+
+export type GuidelineKind = 'avoid' | 'helps' | 'action'
+
+export type EpisodeType = 'cold' | 'flu' | 'physical' | 'mental' | 'other'
+
+export interface HealthGuideline {
+  id: string
+  condition_id: string
+  kind: GuidelineKind
+  text: string
+  is_done: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface HealthGuidelineInput {
+  kind: GuidelineKind
+  text: string
+  is_done?: boolean
+  sort_order?: number
+}
+
+export interface HealthGuidelineUpdate {
+  kind?: GuidelineKind
+  text?: string
+  is_done?: boolean
+  sort_order?: number
+}
+
+export interface HealthReminder {
+  id: string
+  condition_id: string
+  text: string
+  time_of_day?: string | null
+  frequency: string
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface HealthReminderInput {
+  text: string
+  time_of_day?: string | null
+  frequency?: string
+  is_active?: boolean
+  sort_order?: number
+}
+
+export interface HealthReminderUpdate {
+  text?: string
+  time_of_day?: string | null
+  frequency?: string
+  is_active?: boolean
+  sort_order?: number
+}
+
+export interface HealthCondition {
+  id: string
+  user_id: string
+  name: string
+  category: ConditionCategory
+  status: ConditionStatus
+  description?: string | null
+  diagnosed_on?: string | null
+  notes?: string | null
+  guidelines: HealthGuideline[]
+  reminders: HealthReminder[]
+  created_at: string
+  updated_at: string
+}
+
+export interface HealthConditionInput {
+  name: string
+  category?: ConditionCategory
+  status?: ConditionStatus
+  description?: string | null
+  diagnosed_on?: string | null
+  notes?: string | null
+}
+
+export interface HealthConditionUpdate {
+  name?: string
+  category?: ConditionCategory
+  status?: ConditionStatus
+  description?: string | null
+  diagnosed_on?: string | null
+  notes?: string | null
+}
+
+export interface GuidelineSuggestion {
+  avoid: string[]
+  helps: string[]
+  action_plan: string[]
+}
+
+export interface SicknessEpisode {
+  id: string
+  user_id: string
+  condition_id?: string | null
+  episode_type: EpisodeType
+  title: string
+  started_on: string
+  ended_on?: string | null
+  severity?: number | null
+  symptoms?: string | null
+  notes?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SicknessEpisodeInput {
+  condition_id?: string | null
+  episode_type: EpisodeType
+  title: string
+  started_on: string
+  ended_on?: string | null
+  severity?: number | null
+  symptoms?: string | null
+  notes?: string | null
+}
+
+export interface SicknessEpisodeUpdate {
+  condition_id?: string | null
+  episode_type?: EpisodeType
+  title?: string
+  started_on?: string
+  ended_on?: string | null
+  severity?: number | null
+  symptoms?: string | null
+  notes?: string | null
+}
+
+export interface SicknessEpisodeSummary {
+  period_start: string
+  period_end: string
+  total: number
+  by_type: Record<string, number>
+}
+
+// ─── Habits ──────────────────────────────────────────────────────────────────
+
+export type HabitCategory = 'substance' | 'behavior' | 'digital' | 'other'
+export type HabitTrackingMode = 'abstinence' | 'control'
+export type HabitStatus = 'active' | 'paused' | 'achieved' | 'abandoned'
+export type HabitEventType = 'check_in' | 'urge' | 'relapse'
+
+export interface Habit {
+  id: string
+  name: string
+  category: HabitCategory
+  tracking_mode: HabitTrackingMode
+  status: HabitStatus
+  motivation?: string | null
+  triggers: string[]
+  coping_strategies: string[]
+  action_plan?: string | null
+  start_date: string
+  created_at: string
+  updated_at: string
+}
+
+export interface HabitCreate {
+  name: string
+  category?: HabitCategory
+  tracking_mode?: HabitTrackingMode
+  motivation?: string
+  triggers?: string[]
+  coping_strategies?: string[]
+  action_plan?: string
+  start_date?: string
+}
+
+export interface HabitUpdate {
+  name?: string
+  category?: HabitCategory
+  tracking_mode?: HabitTrackingMode
+  status?: HabitStatus
+  motivation?: string | null
+  triggers?: string[]
+  coping_strategies?: string[]
+  action_plan?: string | null
+  start_date?: string
+}
+
+export interface HabitEvent {
+  id: string
+  habit_id: string
+  event_type: HabitEventType
+  occurred_at: string
+  intensity?: number | null
+  emotion?: string | null
+  trigger?: string | null
+  feeling_note?: string | null
+  thought?: string | null
+  action_taken?: string | null
+  resisted?: boolean | null
+  breathing_used: boolean
+  emotion_entry_id?: string | null
+  note?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface HabitEventCreate {
+  event_type: HabitEventType
+  occurred_at?: string
+  intensity?: number
+  emotion?: string
+  trigger?: string
+  feeling_note?: string
+  thought?: string
+  action_taken?: string
+  resisted?: boolean
+  breathing_used?: boolean
+  note?: string
+  mirror_to_emotions?: boolean
+}
+
+export interface HabitEventUpdate {
+  event_type?: HabitEventType
+  occurred_at?: string
+  intensity?: number
+  emotion?: string
+  trigger?: string
+  feeling_note?: string
+  thought?: string
+  action_taken?: string
+  resisted?: boolean
+  breathing_used?: boolean
+  note?: string
+}
+
+export interface HabitMetrics {
+  current_streak_days: number
+  longest_streak_days: number
+  days_since_last_relapse: number | null
+  total_relapses: number
+  total_urges: number
+  urges_resisted: number
+  urge_resistance_rate: number
+}
+
+export interface HabitSummary {
+  start_date: string
+  end_date: string
+  total_events: number
+  relapses: number
+  urges: number
+  check_ins: number
+  urges_resisted: number
+  urge_resistance_rate: number
+  dominant_trigger?: string | null
+  dominant_emotion?: string | null
+  avg_intensity: number
+  metrics: HabitMetrics
+}
+
 export interface JiraTestResult {
   ok: boolean
   account_id?: string | null

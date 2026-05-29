@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -538,6 +538,79 @@ export const api = {
     weeklySummary: (weekStart?: string) => {
       const qs = weekStart ? `?week_start=${weekStart}` : ''
       return fetchApi<NutritionDaySummary>(`/nutrition/summary/week${qs}`)
+    },
+  },
+
+  health: {
+    conditions: {
+      list: () => fetchApi<HealthCondition[]>('/health/conditions'),
+      get: (id: string) => fetchApi<HealthCondition>(`/health/conditions/${id}`),
+      create: (data: HealthConditionInput) =>
+        fetchApi<HealthCondition>('/health/conditions', { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: HealthConditionUpdate) =>
+        fetchApi<HealthCondition>(`/health/conditions/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      delete: (id: string) => fetchApi<void>(`/health/conditions/${id}`, { method: 'DELETE' }),
+    },
+    guidelines: {
+      create: (conditionId: string, data: HealthGuidelineInput) =>
+        fetchApi<HealthGuideline>(`/health/conditions/${conditionId}/guidelines`, { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: HealthGuidelineUpdate) =>
+        fetchApi<HealthGuideline>(`/health/guidelines/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      delete: (id: string) => fetchApi<void>(`/health/guidelines/${id}`, { method: 'DELETE' }),
+    },
+    reminders: {
+      create: (conditionId: string, data: HealthReminderInput) =>
+        fetchApi<HealthReminder>(`/health/conditions/${conditionId}/reminders`, { method: 'POST', body: JSON.stringify(data) }),
+      update: (id: string, data: HealthReminderUpdate) =>
+        fetchApi<HealthReminder>(`/health/reminders/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      delete: (id: string) => fetchApi<void>(`/health/reminders/${id}`, { method: 'DELETE' }),
+    },
+    suggest: (data: { name: string; category?: string }) =>
+      fetchApi<GuidelineSuggestion>('/health/conditions/suggest', { method: 'POST', body: JSON.stringify(data) }),
+    episodes: {
+      list: (params?: Record<string, string>) => {
+        const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+        return fetchApi<SicknessEpisode[]>(`/health/episodes${qs}`)
+      },
+      create: (data: SicknessEpisodeInput) =>
+        fetchApi<SicknessEpisode>('/health/episodes', { method: 'POST', body: JSON.stringify(data) }),
+      get: (id: string) => fetchApi<SicknessEpisode>(`/health/episodes/${id}`),
+      update: (id: string, data: SicknessEpisodeUpdate) =>
+        fetchApi<SicknessEpisode>(`/health/episodes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      delete: (id: string) => fetchApi<void>(`/health/episodes/${id}`, { method: 'DELETE' }),
+      summary: (params?: Record<string, string>) => {
+        const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+        return fetchApi<SicknessEpisodeSummary>(`/health/episodes/summary${qs}`)
+      },
+    },
+  },
+
+  habits: {
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<Habit[]>(`/habits${qs}`)
+    },
+    get: (id: string) => fetchApi<Habit>(`/habits/${id}`),
+    create: (data: HabitCreate) =>
+      fetchApi<Habit>('/habits', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: HabitUpdate) =>
+      fetchApi<Habit>(`/habits/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<void>(`/habits/${id}`, { method: 'DELETE' }),
+    events: {
+      list: (habitId: string, params?: Record<string, string>) => {
+        const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+        return fetchApi<HabitEvent[]>(`/habits/${habitId}/events${qs}`)
+      },
+      create: (habitId: string, data: HabitEventCreate) =>
+        fetchApi<HabitEvent>(`/habits/${habitId}/events`, { method: 'POST', body: JSON.stringify(data) }),
+      update: (habitId: string, eventId: string, data: HabitEventUpdate) =>
+        fetchApi<HabitEvent>(`/habits/${habitId}/events/${eventId}`, { method: 'PATCH', body: JSON.stringify(data) }),
+      delete: (habitId: string, eventId: string) =>
+        fetchApi<void>(`/habits/${habitId}/events/${eventId}`, { method: 'DELETE' }),
+    },
+    summary: (habitId: string, params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<HabitSummary>(`/habits/${habitId}/summary${qs}`)
     },
   },
 }

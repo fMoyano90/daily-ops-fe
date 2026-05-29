@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
-import { Clock, Settings, Sun, Moon, LogOut, X, Target, SmilePlus } from 'lucide-react'
+import { Clock, Settings, Sun, Moon, LogOut, X, Target, SmilePlus, UtensilsCrossed, HeartPulse, Sprout } from 'lucide-react'
 import { useThemeStore } from '@/lib/theme'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -103,6 +103,16 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
               </li>
               <li>
                 <Link
+                  href="/habits"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
+                >
+                  <Sprout className="w-5 h-5 text-text-muted" />
+                  Hábitos
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/emotions"
                   onClick={onClose}
                   className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
@@ -119,6 +129,26 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                 >
                   <Moon className="w-5 h-5 text-text-muted" />
                   Sleep
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/nutrition"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
+                >
+                  <UtensilsCrossed className="w-5 h-5 text-text-muted" />
+                  Nutrition
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/health"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
+                >
+                  <HeartPulse className="w-5 h-5 text-text-muted" />
+                  Salud
                 </Link>
               </li>
               <li>

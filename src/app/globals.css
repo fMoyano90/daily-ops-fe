@@ -273,6 +273,23 @@ textarea::placeholder {
   justify-content: center;
 }
 
+.form-input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background-color: var(--bg);
+  padding: 0.625rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.form-input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ── Mobile bottom nav spacer ──────────────────────────────────── */
 .pb-bottom-nav {
   padding-bottom: calc(64px + env(safe-area-inset-bottom));
