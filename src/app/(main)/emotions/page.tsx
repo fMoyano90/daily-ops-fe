@@ -2,7 +2,7 @@
 
 import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
-import { Activity, BookOpen, Brain, CalendarDays, Gauge, Plus, Sparkles, Trash2, TrendingUp } from 'lucide-react'
+import { Activity, BookOpen, Brain, CalendarDays, ChevronLeft, ChevronRight, Gauge, Plus, Sparkles, Trash2, TrendingUp } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonCard, SkeletonStats } from '@/components/shared/Skeleton'
@@ -63,13 +63,37 @@ function formatEntryTime(value: string) {
   return new Date(value).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
 }
 
+function getLocalDateValue(date = new Date()) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function parseDateValue(value: string) {
+  const [year, month, day] = value.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+function addDaysToDateValue(value: string, days: number) {
+  const date = parseDateValue(value)
+  date.setDate(date.getDate() + days)
+  return getLocalDateValue(date)
+}
+
+function formatDateLabel(value: string) {
+  return parseDateValue(value).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export default function EmotionsPage() {
   const [entries, setEntries] = useState<EmotionEntry[]>([])
   const [summary, setSummary] = useState<EmotionSummary>(defaultSummary)
   const [loading, setLoading] = useState(true)
+  const [timelineLoading, setTimelineLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateValue())
   const [form, setForm] = useState({
     emotion: 'alegria',
     intensity: 5,
@@ -89,20 +113,22 @@ export default function EmotionsPage() {
 
   const loadData = useCallback(async () => {
     setError(null)
+    setTimelineLoading(true)
     try {
-      const [todayEntries, weeklySummary] = await Promise.all([
-        api.emotions.today(),
+      const [dateEntries, weeklySummary] = await Promise.all([
+        api.emotions.list({ date_from: selectedDate, date_to: selectedDate, limit: '200' }),
         api.emotions.weeklySummary().catch(() => defaultSummary),
       ])
-      setEntries(todayEntries)
+      setEntries(dateEntries)
       setSummary(weeklySummary)
     } catch (err) {
       console.error('Failed to load emotions:', err)
       setError(err instanceof Error ? err.message : 'No se pudo cargar el diario emocional')
     } finally {
       setLoading(false)
+      setTimelineLoading(false)
     }
-  }, [])
+  }, [selectedDate])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -165,7 +191,12 @@ export default function EmotionsPage() {
         note: '',
       }))
       setStatusMessage('Registro emocional guardado')
-      await loadData()
+      const todayValue = getLocalDateValue()
+      if (selectedDate !== todayValue) {
+        setSelectedDate(todayValue)
+      } else {
+        await loadData()
+      }
     } catch (err) {
       console.error('Failed to create emotion:', err)
       setError(err instanceof Error ? err.message : 'No se pudo guardar el registro')
@@ -188,6 +219,9 @@ export default function EmotionsPage() {
   }
 
   const topTriggers = Object.entries(summary.by_trigger).slice(0, 4)
+  const todayValue = getLocalDateValue()
+  const isSelectedToday = selectedDate === todayValue
+  const timelineTitle = isSelectedToday ? 'Timeline de hoy' : `Timeline del ${formatDateLabel(selectedDate)}`
 
   if (loading) {
     return (
@@ -332,16 +366,57 @@ export default function EmotionsPage() {
 
           <section aria-labelledby="emotion-timeline-title" className="space-y-4">
             <div className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5">
-              <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
                 <div>
-                  <h3 id="emotion-timeline-title" className="text-base font-semibold text-text">Timeline de hoy</h3>
+                  <h3 id="emotion-timeline-title" className="text-base font-semibold text-text">{timelineTitle}</h3>
                   <p className="text-sm text-text-muted mt-1">{entries.length} registro{entries.length !== 1 ? 's' : ''} emocional{entries.length !== 1 ? 'es' : ''}</p>
                 </div>
-                <CalendarDays className="w-5 h-5 text-text-subtle" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate((date) => addDaysToDateValue(date, -1))}
+                    className="touch-target inline-flex items-center justify-center rounded-lg border border-border text-text-muted hover:text-text hover:bg-bg-muted transition-colors"
+                    aria-label="Ver registros del día anterior"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <label className="relative inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-bg text-sm text-text">
+                    <CalendarDays className="w-4 h-4 text-text-subtle" aria-hidden="true" />
+                    <span className="sr-only">Fecha del historial emocional</span>
+                    <input
+                      type="date"
+                      value={selectedDate}
+                      max={todayValue}
+                      onChange={(e) => setSelectedDate(e.target.value || todayValue)}
+                      className="bg-transparent text-sm text-text focus:outline-none"
+                      aria-label="Fecha del historial emocional"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDate((date) => addDaysToDateValue(date, 1))}
+                    disabled={isSelectedToday}
+                    className="touch-target inline-flex items-center justify-center rounded-lg border border-border text-text-muted hover:text-text hover:bg-bg-muted disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-muted transition-colors"
+                    aria-label="Ver registros del día siguiente"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  {!isSelectedToday && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDate(todayValue)}
+                      className="px-3 py-2 rounded-lg bg-accent-soft text-accent text-sm font-semibold hover:bg-accent-soft/80 transition-colors"
+                    >
+                      Hoy
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {entries.length === 0 ? (
-                <EmptyState icon={<Brain className="w-8 h-8" />} title="Sin registros hoy" description="Registra una emoción para empezar a encontrar patrones reales de tu día." />
+              {timelineLoading ? (
+                <div className="py-8 text-center text-sm text-text-muted">Cargando registros...</div>
+              ) : entries.length === 0 ? (
+                <EmptyState icon={<Brain className="w-8 h-8" />} title={isSelectedToday ? 'Sin registros hoy' : 'Sin registros en esta fecha'} description={isSelectedToday ? 'Registra una emoción para empezar a encontrar patrones reales de tu día.' : 'Puedes cambiar de día para revisar otros registros emocionales.'} />
               ) : (
                 <motion.ol className="space-y-3" variants={listVariants} initial="hidden" animate="show">
                   {entries.map((entry) => (
