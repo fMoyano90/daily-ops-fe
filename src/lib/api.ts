@@ -354,6 +354,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    list: () => fetchApi<{ subscriptions: Array<{ id: string; endpoint: string; user_agent: string | null; created_at: string; last_seen_at: string }>; count: number }>('/push/subscriptions'),
+    keepOnlyCurrent: (endpoint: string) =>
+      fetchApi<void>(`/push/keep-only-current?endpoint=${encodeURIComponent(endpoint)}`, {
+        method: 'POST',
+      }),
   },
 
   goals: {

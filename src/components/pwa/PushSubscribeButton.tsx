@@ -26,6 +26,7 @@ export function PushSubscribeButton() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [subscription, setSubscription] = useState<PushSubscription | null>(null)
+  const [subCount, setSubCount] = useState(0)
 
   const refresh = useCallback(async () => {
     if (typeof window === 'undefined') return
@@ -42,6 +43,13 @@ export function PushSubscribeButton() {
       const sub = await reg.pushManager.getSubscription()
       setSubscription(sub)
       setStatus(sub ? 'subscribed' : 'idle')
+      // Fetch subscription count from backend
+      try {
+        const { count } = await api.push.list()
+        setSubCount(count)
+      } catch {
+        setSubCount(0)
+      }
     } catch (err) {
       console.error(err)
       setStatus('idle')
@@ -121,6 +129,20 @@ export function PushSubscribeButton() {
     }
   }
 
+  const cleanupDuplicates = async () => {
+    if (!subscription) return
+    setBusy(true)
+    setError(null)
+    try {
+      await api.push.keepOnlyCurrent(subscription.endpoint)
+      setSubCount(1)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Limpieza falló')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (status === 'loading') {
     return <div className="text-sm text-text-subtle">Cargando…</div>
   }
@@ -176,6 +198,15 @@ export function PushSubscribeButton() {
             >
               Enviar prueba
             </button>
+            {subCount > 1 && (
+              <button
+                onClick={cleanupDuplicates}
+                disabled={busy}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-warning hover:bg-warning-soft disabled:opacity-60 touch-target"
+              >
+                Limpiar duplicadas ({subCount})
+              </button>
+            )}
           </>
         ) : (
           <button
