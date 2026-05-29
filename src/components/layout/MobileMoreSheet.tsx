@@ -113,6 +113,16 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
               </li>
               <li>
                 <Link
+                  href="/sleep"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
+                >
+                  <Moon className="w-5 h-5 text-text-muted" />
+                  Sleep
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/history"
                   onClick={onClose}
                   className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"

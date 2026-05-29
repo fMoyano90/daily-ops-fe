@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -457,6 +457,34 @@ export const api = {
     monthlySummary: (month?: string) => {
       const qs = month ? `?month=${month}` : ''
       return fetchApi<DailyReflectionSummary>(`/daily-reflections/summary/month${qs}`)
+    },
+  },
+
+  sleepLogs: {
+    today: () => fetchApi<SleepLog | null>('/sleep-logs/today'),
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<SleepLog[]>(`/sleep-logs${qs}`)
+    },
+    create: (data: SleepLogInput) =>
+      fetchApi<SleepLog>('/sleep-logs', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    getByDate: (date: string) => fetchApi<SleepLog>(`/sleep-logs/${date}`),
+    update: (id: string, data: SleepLogInput) =>
+      fetchApi<SleepLog>(`/sleep-logs/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) => fetchApi<void>(`/sleep-logs/${id}`, { method: 'DELETE' }),
+    weeklySummary: (weekStart?: string) => {
+      const qs = weekStart ? `?week_start=${weekStart}` : ''
+      return fetchApi<SleepLogSummary>(`/sleep-logs/summary/week${qs}`)
+    },
+    monthlySummary: (month?: string) => {
+      const qs = month ? `?month=${month}` : ''
+      return fetchApi<SleepLogSummary>(`/sleep-logs/summary/month${qs}`)
     },
   },
 }

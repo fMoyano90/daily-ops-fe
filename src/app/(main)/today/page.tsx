@@ -17,6 +17,7 @@ import Link from 'next/link'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
 import { SwipeAction } from '@/components/shared/SwipeAction'
+import { SleepLogPrompt } from '@/components/sleep/SleepLogPrompt'
 import confetti from 'canvas-confetti'
 
 const priorityOrder: Record<string, number> = {
@@ -657,6 +658,8 @@ export default function TodayPage() {
               </div>
               <span className="text-xs md:text-sm text-text-subtle">{tasks.length} tareas en total</span>
             </motion.div>
+
+            <SleepLogPrompt />
 
             <motion.div
               className="space-y-3"

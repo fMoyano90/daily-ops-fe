@@ -11,6 +11,7 @@ import {
   Clock,
   Settings,
   Sun,
+  Moon,
   SmilePlus,
   Repeat2,
   PanelLeftClose,
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/recurring', label: 'Recurring', icon: Repeat2 },
   { href: '/goals', label: 'Goals', icon: Target },
   { href: '/emotions', label: 'Emotions', icon: SmilePlus },
+  { href: '/sleep', label: 'Sleep', icon: Moon },
   { href: '/history', label: 'History', icon: Clock },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]

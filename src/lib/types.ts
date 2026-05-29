@@ -340,6 +340,50 @@ export interface DailyReflectionSummary {
   productivity_trend: 'up' | 'down' | 'stable'
 }
 
+export interface SleepLog {
+  id: string
+  user_id: string
+  daily_plan_id?: string | null
+  date: string
+  hours_slept?: number | null
+  sleep_quality?: number | null
+  bedtime?: string | null
+  wake_time?: string | null
+  wakeups?: number | null
+  tiredness_on_wake?: number | null
+  tiredness_during_day?: number | null
+  note?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SleepLogInput {
+  date?: string
+  hours_slept?: number
+  sleep_quality?: number
+  bedtime?: string
+  wake_time?: string
+  wakeups?: number
+  tiredness_on_wake?: number
+  tiredness_during_day?: number
+  note?: string
+}
+
+export interface SleepLogSummary {
+  period_start: string
+  period_end: string
+  total_logs: number
+  days_with_log: number
+  days_without_log: number
+  avg_hours_slept?: number | null
+  avg_sleep_quality?: number | null
+  avg_wakeups?: number | null
+  avg_tiredness_on_wake?: number | null
+  avg_tiredness_during_day?: number | null
+  hours_trend: 'up' | 'down' | 'stable'
+  quality_trend: 'up' | 'down' | 'stable'
+}
+
 export interface JiraTestResult {
   ok: boolean
   account_id?: string | null
