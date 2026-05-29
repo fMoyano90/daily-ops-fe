@@ -7,11 +7,16 @@ import { api } from '@/lib/api'
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw = window.atob(base64)
+  const raw = window.atob(base64String)
   const buffer = new ArrayBuffer(raw.length)
   const out = new Uint8Array(buffer)
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i)
   return out as Uint8Array<ArrayBuffer>
+}
+
+function isSafariOnMac(): boolean {
+  const ua = navigator.userAgent
+  return /Macintosh/.test(ua) && /Safari/.test(ua) && !/Chrome/.test(ua) && !/Chromium/.test(ua)
 }
 
 type Status = 'loading' | 'unsupported' | 'denied' | 'idle' | 'subscribed'
@@ -103,8 +108,12 @@ export function PushSubscribeButton() {
 
   const sendTest = async () => {
     setBusy(true)
+    setError(null)
     try {
-      await api.push.test({ title: 'DailyOps', body: '¡Notificaciones activadas!', url: '/today' })
+      const res = await api.push.test({ title: 'DailyOps', body: '¡Notificaciones activadas!', url: '/today' })
+      if (res.sent === 0) {
+        setError('No hay suscripciones activas. Haz clic en "Desactivar recordatorios" y luego vuelve a activarlos.')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Test falló')
     } finally {
@@ -114,6 +123,19 @@ export function PushSubscribeButton() {
 
   if (status === 'loading') {
     return <div className="text-sm text-text-subtle">Cargando…</div>
+  }
+
+  if (isSafariOnMac()) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 text-sm text-text-muted">
+          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>
+            Safari en Mac no soporta notificaciones push web. Usa Chrome o instala la app desde Chrome (Menú → Instalar DailyOps) para recibir recordatorios en tu Mac.
+          </span>
+        </div>
+      </div>
+    )
   }
 
   if (status === 'unsupported') {
@@ -167,6 +189,17 @@ export function PushSubscribeButton() {
         )}
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
+      {status === 'subscribed' && (
+        <details className="text-xs text-text-muted">
+          <summary className="cursor-pointer hover:text-text">¿No llega la notificación?</summary>
+          <ul className="mt-1 space-y-1 list-disc list-inside">
+            <li>Chrome debe estar abierto (puede estar minimizado)</li>
+            <li>Revisa Preferencias del Sistema → Notificaciones → Google Chrome</li>
+            <li>Si activaste en Safari, desactiva y vuelve a activar aquí</li>
+            <li>En modo incógnito las notificaciones no funcionan</li>
+          </ul>
+        </details>
+      )}
     </div>
   )
 }
