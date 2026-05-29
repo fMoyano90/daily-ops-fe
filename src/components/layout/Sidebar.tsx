@@ -17,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Target,
+  UtensilsCrossed,
 } from 'lucide-react'
 
 const navItems = [
@@ -27,6 +28,7 @@ const navItems = [
   { href: '/goals', label: 'Goals', icon: Target },
   { href: '/emotions', label: 'Emotions', icon: SmilePlus },
   { href: '/sleep', label: 'Sleep', icon: Moon },
+  { href: '/nutrition', label: 'Nutrition', icon: UtensilsCrossed },
   { href: '/history', label: 'History', icon: Clock },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]

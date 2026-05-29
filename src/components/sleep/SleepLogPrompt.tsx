@@ -48,7 +48,16 @@ export function SleepLogPrompt() {
       setOpen(false)
     } catch (err) {
       console.error('Failed to save sleep log:', err)
-      setError(err instanceof Error ? err.message : 'No se pudo guardar el registro')
+      const message = err instanceof Error ? err.message : 'No se pudo guardar el registro'
+      if (message.toLowerCase().includes('already exists')) {
+        const existing = await api.sleepLogs.today().catch(() => null)
+        if (existing) {
+          setSleepLog(existing)
+          setOpen(false)
+          return
+        }
+      }
+      setError(message)
     } finally {
       setSaving(false)
     }

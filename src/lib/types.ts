@@ -384,6 +384,145 @@ export interface SleepLogSummary {
   quality_trend: 'up' | 'down' | 'stable'
 }
 
+export type Sex = 'male' | 'female'
+
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active'
+
+export type NutritionGoal = 'lose' | 'maintain' | 'gain'
+
+export type NutritionDayStatus = 'draft' | 'analyzed'
+
+export interface HealthProfile {
+  id: string
+  user_id: string
+  sex: Sex
+  birth_date: string
+  height_cm: number
+  weight_kg: number
+  activity_level: ActivityLevel
+  goal: NutritionGoal
+  target_calories_override?: number | null
+  glass_ml: number
+  age: number
+  bmr: number
+  tdee: number
+  recommended_calories: number
+  created_at: string
+  updated_at: string
+}
+
+export interface HealthProfileInput {
+  sex: Sex
+  birth_date: string
+  height_cm: number
+  weight_kg: number
+  activity_level: ActivityLevel
+  goal: NutritionGoal
+  target_calories_override?: number | null
+  glass_ml: number
+}
+
+export interface MealEntry {
+  id: string
+  user_id: string
+  daily_plan_id?: string | null
+  date: string
+  label: string
+  description: string
+  sort_order: number
+  calories?: number | null
+  protein_g?: number | null
+  carbs_g?: number | null
+  sugar_g?: number | null
+  fat_g?: number | null
+  fiber_g?: number | null
+  ai_notes?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface MealEntryInput {
+  date?: string
+  label?: string
+  description: string
+}
+
+export interface MealEntryUpdate {
+  label?: string
+  description?: string
+  sort_order?: number
+}
+
+export interface ExerciseEntry {
+  id: string
+  user_id: string
+  daily_plan_id?: string | null
+  date: string
+  label: string
+  description: string
+  sort_order: number
+  calories_burned?: number | null
+  duration_min?: number | null
+  intensity?: string | null
+  ai_notes?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ExerciseEntryInput {
+  date?: string
+  label?: string
+  description: string
+}
+
+export interface ExerciseEntryUpdate {
+  label?: string
+  description?: string
+  sort_order?: number
+}
+
+export interface NutritionDay {
+  id: string
+  user_id: string
+  daily_plan_id?: string | null
+  date: string
+  water_ml: number
+  day_note?: string | null
+  status: NutritionDayStatus
+  analyzed_at?: string | null
+  ai_model?: string | null
+  ai_summary?: string | null
+  recommended_calories?: number | null
+  consumed_calories?: number | null
+  burned_calories?: number | null
+  balance_calories?: number | null
+  total_protein_g?: number | null
+  total_carbs_g?: number | null
+  total_sugar_g?: number | null
+  total_fat_g?: number | null
+  total_fiber_g?: number | null
+  meals: MealEntry[]
+  exercises: ExerciseEntry[]
+  created_at: string
+  updated_at: string
+}
+
+export interface NutritionDaySummary {
+  period_start: string
+  period_end: string
+  total_days: number
+  analyzed_days: number
+  avg_recommended_calories?: number | null
+  avg_consumed_calories?: number | null
+  avg_burned_calories?: number | null
+  avg_balance_calories?: number | null
+  total_water_ml: number
+  avg_protein_g?: number | null
+  avg_carbs_g?: number | null
+  avg_sugar_g?: number | null
+  avg_fat_g?: number | null
+}
+
 export interface JiraTestResult {
   ok: boolean
   account_id?: string | null

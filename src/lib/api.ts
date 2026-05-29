@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -31,6 +31,30 @@ async function writeCache<T>(key: string, data: T): Promise<void> {
   } catch {
     // ignore
   }
+}
+
+function formatApiError(error: unknown, fallback: string): string {
+  if (!error || typeof error !== 'object') return fallback
+  const detail = (error as { detail?: unknown }).detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => {
+        if (!item || typeof item !== 'object') return String(item)
+        const loc = Array.isArray((item as { loc?: unknown }).loc)
+          ? (item as { loc: unknown[] }).loc.join('.')
+          : ''
+        const msg = (item as { msg?: unknown }).msg
+        return loc && msg ? `${loc}: ${String(msg)}` : msg ? String(msg) : JSON.stringify(item)
+      })
+      .join('; ')
+  }
+  if (detail && typeof detail === 'object') {
+    const message = (detail as { message?: unknown; msg?: unknown }).message ?? (detail as { msg?: unknown }).msg
+    if (typeof message === 'string') return message
+    return JSON.stringify(detail)
+  }
+  return fallback
 }
 
 function getAccessToken(): string | null {
@@ -120,7 +144,7 @@ async function fetchApi<T>(path: string, options?: RequestInit, retryCount = 0):
       if (cached !== null) return cached
     }
     const error = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(error.detail || 'Request failed')
+    throw new Error(formatApiError(error, 'Request failed'))
   }
   if (res.status === 204) return undefined as T
   const data = (await res.json()) as T
@@ -485,6 +509,35 @@ export const api = {
     monthlySummary: (month?: string) => {
       const qs = month ? `?month=${month}` : ''
       return fetchApi<SleepLogSummary>(`/sleep-logs/summary/month${qs}`)
+    },
+  },
+
+  nutrition: {
+    profile: () => fetchApi<HealthProfile | null>('/nutrition/profile'),
+    saveProfile: (data: HealthProfileInput) =>
+      fetchApi<HealthProfile>('/nutrition/profile', { method: 'PUT', body: JSON.stringify(data) }),
+    today: () => fetchApi<NutritionDay>('/nutrition/today'),
+    getByDate: (date: string) => fetchApi<NutritionDay>(`/nutrition/${date}`),
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<NutritionDay[]>(`/nutrition${qs}`)
+    },
+    createMeal: (data: MealEntryInput) =>
+      fetchApi<MealEntry>('/nutrition/meals', { method: 'POST', body: JSON.stringify(data) }),
+    updateMeal: (id: string, data: MealEntryUpdate) =>
+      fetchApi<MealEntry>(`/nutrition/meals/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteMeal: (id: string) => fetchApi<void>(`/nutrition/meals/${id}`, { method: 'DELETE' }),
+    createExercise: (data: ExerciseEntryInput) =>
+      fetchApi<ExerciseEntry>('/nutrition/exercises', { method: 'POST', body: JSON.stringify(data) }),
+    updateExercise: (id: string, data: ExerciseEntryUpdate) =>
+      fetchApi<ExerciseEntry>(`/nutrition/exercises/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteExercise: (id: string) => fetchApi<void>(`/nutrition/exercises/${id}`, { method: 'DELETE' }),
+    setWater: (date: string, data: { delta?: number; water_ml?: number }) =>
+      fetchApi<NutritionDay>(`/nutrition/${date}/water`, { method: 'POST', body: JSON.stringify(data) }),
+    analyze: (date: string) => fetchApi<NutritionDay>(`/nutrition/${date}/analyze`, { method: 'POST' }),
+    weeklySummary: (weekStart?: string) => {
+      const qs = weekStart ? `?week_start=${weekStart}` : ''
+      return fetchApi<NutritionDaySummary>(`/nutrition/summary/week${qs}`)
     },
   },
 }

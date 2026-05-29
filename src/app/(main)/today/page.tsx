@@ -59,6 +59,18 @@ function formatMeetingTime(value: string | null | undefined): string | null {
   return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`
 }
 
+function getRecurringSuggestionId(taskId: string): string | null {
+  return taskId.startsWith('recurring_') ? taskId.replace('recurring_', '') : null
+}
+
+function isSuggestionInPlan(task: Task, dailyTasks: DailyTask[]): boolean {
+  const recurringId = getRecurringSuggestionId(task.id)
+  return dailyTasks.some((dailyTask) => {
+    if (recurringId) return dailyTask.recurring_task_id === recurringId
+    return dailyTask.task_id === task.id
+  })
+}
+
 export default function TodayPage() {
   const [tasks, setTasks] = useState<DailyTask[]>([])
   const [suggested, setSuggested] = useState<Task[]>([])
@@ -134,8 +146,7 @@ export default function TodayPage() {
 
         let unique = allSuggestions.filter(
           (t: Task, i: number, arr: Task[]) => {
-            const isRecurring = t.id.startsWith('recurring_')
-            const recurringId = isRecurring ? t.id.replace('recurring_', '') : null
+            const recurringId = getRecurringSuggestionId(t.id)
             return (
               arr.findIndex((x) => x.id === t.id) === i &&
               !taskIdsInDay.has(t.id) &&
@@ -171,7 +182,10 @@ export default function TodayPage() {
   }, [])
 
   useEffect(() => {
-    loadData()
+    const timer = window.setTimeout(() => {
+      void loadData()
+    }, 0)
+    return () => window.clearTimeout(timer)
   }, [loadData])
 
   const ptr = usePullToRefresh({
@@ -454,7 +468,7 @@ export default function TodayPage() {
   }
 
   const handleAddToToday = async (task: Task) => {
-    const alreadyInPlan = tasks.some((t) => t.task_id === task.id || t.recurring_task_id === task.id.replace('recurring_', ''))
+    const alreadyInPlan = isSuggestionInPlan(task, tasks)
     if (alreadyInPlan || addingTaskId === task.id) return
 
     setAddingTaskId(task.id)
@@ -720,8 +734,7 @@ export default function TodayPage() {
                     {suggested.map((task) => {
                       const project = projects.find((p) => p.id === task.project_id)
                       const isRecurringSuggestion = task.id.startsWith('recurring_')
-                      const recurringId = isRecurringSuggestion ? task.id.replace('recurring_', '') : null
-                      const alreadyInPlan = tasks.some((t) => t.task_id === task.id || t.recurring_task_id === recurringId)
+                      const alreadyInPlan = isSuggestionInPlan(task, tasks)
                       const meetingTime = formatMeetingTime(task.meeting_time)
                       const safeExternalUrl = normalizeExternalUrl(task.external_url)
                       const reminderLabel = task.reminder_minutes_before != null
