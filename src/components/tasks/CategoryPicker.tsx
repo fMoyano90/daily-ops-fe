@@ -98,7 +98,7 @@ export function CategoryPicker({ category, dueDate, meetingTime, editable = fals
   }, [category, dueDate, meetingTime])
 
   const displayDate = isScheduledCategory(category) ? formatDisplayDate(dueDate) : null
-  const displayTime = isScheduledCategory(category) ? formatMeetingTime(meetingTime) : null
+  const displayTime = formatMeetingTime(meetingTime)
   const isPredefined = category ? TASK_CATEGORIES.includes(category as never) : false
   const showCustom = draftCategory === '__custom__' || (!!draftCategory && !TASK_CATEGORIES.includes(draftCategory as never))
 

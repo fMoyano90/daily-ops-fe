@@ -12,7 +12,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
 import { Task, Project, Priority, SubtaskStatus } from '@/lib/types'
-import { sourceLabel } from '@/lib/utils'
+import { normalizeExternalUrl, sourceLabel } from '@/lib/utils'
 import { ListFilter, Plus, ExternalLink, CalendarDays, ChevronDown, ChevronRight, CheckCircle2, Circle, Repeat2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -129,9 +129,15 @@ export default function BacklogPage() {
   }
 
   const handleSaveUrl = async (taskId: string) => {
+    const normalizedExternalUrl = normalizeExternalUrl(urlValue)
+    if (urlValue.trim() && !normalizedExternalUrl) {
+      alert('Ingresa una URL válida que empiece con http:// o https://')
+      return
+    }
+
     try {
-      await api.tasks.update(taskId, { external_url: urlValue || null })
-      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, external_url: urlValue || undefined } : t))
+      await api.tasks.update(taskId, { external_url: normalizedExternalUrl })
+      setTasks((prev) => prev.map((t) => t.id === taskId ? { ...t, external_url: normalizedExternalUrl || undefined } : t))
       setEditingUrl(null)
       setUrlValue('')
     } catch (err) {
@@ -323,6 +329,7 @@ export default function BacklogPage() {
               const isExpanded = expandedTasks.has(task.id)
               const subtasks = task.subtasks || []
               const completedSubtasks = subtasks.filter((s) => s.status === 'completed').length
+              const safeExternalUrl = normalizeExternalUrl(task.external_url)
 
               return (
                 <motion.div
@@ -373,8 +380,8 @@ export default function BacklogPage() {
                                   </span>
                                 )}
                               </div>
-                              {task.source === 'jira' && task.external_key && (
-                                <a href={task.external_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-accent hover:text-[var(--accent-hover)] flex-shrink-0 transition-colors">
+                              {task.source === 'jira' && task.external_key && safeExternalUrl && (
+                                <a href={safeExternalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-accent hover:text-[var(--accent-hover)] flex-shrink-0 transition-colors">
                                   <ExternalLink className="w-3 h-3" />
                                   {task.external_key}
                                 </a>
@@ -481,11 +488,11 @@ export default function BacklogPage() {
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
-                              {task.external_url ? (
+                              {safeExternalUrl ? (
                                 <>
-                                  <a href={task.external_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-accent hover:text-[var(--accent-hover)] flex-1 truncate transition-colors">
+                                  <a href={safeExternalUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-sm text-accent hover:text-[var(--accent-hover)] flex-1 truncate transition-colors">
                                     <ExternalLink className="w-4 h-4 flex-shrink-0" />
-                                    <span className="truncate">{task.external_url}</span>
+                                    <span className="truncate">{safeExternalUrl}</span>
                                   </a>
                                   <button onClick={() => { setEditingUrl(task.id); setUrlValue(task.external_url || '') }} className="px-2 py-1 text-xs text-text-subtle hover:text-text transition-colors">Editar</button>
                                 </>

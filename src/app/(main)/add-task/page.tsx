@@ -6,6 +6,7 @@ import { Header } from '@/components/layout/Header'
 import { api } from '@/lib/api'
 import { Project } from '@/lib/types'
 import { TASK_CATEGORIES, isScheduledCategory } from '@/lib/categories'
+import { normalizeExternalUrl } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
 
@@ -39,6 +40,12 @@ export default function AddTaskPage() {
     e.preventDefault()
     if (!title.trim() || !projectId) return
 
+    const normalizedExternalUrl = normalizeExternalUrl(externalUrl)
+    if (externalUrl.trim() && !normalizedExternalUrl) {
+      alert('Ingresa una URL válida que empiece con http:// o https://')
+      return
+    }
+
     setLoading(true)
     try {
       await api.tasks.create({
@@ -49,7 +56,7 @@ export default function AddTaskPage() {
         priority,
         due_date: dueDate || null,
         meeting_time: isScheduledCategory(category) ? (meetingTime || null) : null,
-        external_url: externalUrl || null,
+        external_url: normalizedExternalUrl,
         category: category || null,
       })
       setShowSuccess(true)

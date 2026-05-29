@@ -5,6 +5,8 @@ import { motion } from 'motion/react'
 import { Modal } from '@/components/shared/Modal'
 import { api } from '@/lib/api'
 import { RecurringTask, Project, Priority } from '@/lib/types'
+import { TASK_CATEGORIES } from '@/lib/categories'
+import { normalizeExternalUrl } from '@/lib/utils'
 import { X } from 'lucide-react'
 
 const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -21,7 +23,10 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
   const [description, setDescription] = useState(task?.description || '')
   const [projectId, setProjectId] = useState(task?.project_id || '')
   const [priority, setPriority] = useState<Priority>(task?.priority || 'medium')
-  const category = task?.category || ''
+  const [category, setCategory] = useState(task?.category || '')
+  const [meetingTime, setMeetingTime] = useState(task?.meeting_time?.slice(0, 5) || '')
+  const [externalUrl, setExternalUrl] = useState(task?.external_url || '')
+  const [tag, setTag] = useState(task?.tag || '')
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>(task?.recurrence_type || 'weekly')
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>(task?.recurrence_days || [0, 1, 2, 3, 4])
   const [loading, setLoading] = useState(false)
@@ -37,6 +42,12 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
     e.preventDefault()
     if (!title.trim() || !projectId) return
 
+    const normalizedExternalUrl = normalizeExternalUrl(externalUrl)
+    if (externalUrl.trim() && !normalizedExternalUrl) {
+      alert('Ingresa una URL válida que empiece con http:// o https://')
+      return
+    }
+
     setLoading(true)
     try {
       const data: Record<string, unknown> = {
@@ -45,6 +56,9 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
         description: description || null,
         priority,
         category: category || null,
+        meeting_time: meetingTime || null,
+        external_url: normalizedExternalUrl,
+        tag: tag || null,
         recurrence_type: recurrenceType,
         recurrence_days: recurrenceType === 'daily' ? null : recurrenceDays,
       }
@@ -101,6 +115,65 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
             placeholder="¿Qué necesitas hacer?"
             className="w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
             required
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-text-muted mb-1.5">
+              Categoría
+            </label>
+            <input
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Reunión, Desarrollo..."
+              list="recurring-task-categories"
+              maxLength={100}
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+            <datalist id="recurring-task-categories">
+              {TASK_CATEGORIES.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-muted mb-1.5">
+              Hora
+            </label>
+            <input
+              type="time"
+              value={meetingTime}
+              onChange={(e) => setMeetingTime(e.target.value)}
+              className="w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-bg-elevated text-text focus:outline-none focus:ring-2 focus:ring-accent"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-muted mb-1.5">
+            Enlace
+          </label>
+          <input
+            type="url"
+            value={externalUrl}
+            onChange={(e) => setExternalUrl(e.target.value)}
+            placeholder="https://meet.google.com/..."
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-muted mb-1.5">
+            Tag
+          </label>
+          <input
+            type="text"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+            placeholder="Nuevo Hábito"
+            maxLength={100}
+            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
 

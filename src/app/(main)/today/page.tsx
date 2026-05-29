@@ -7,10 +7,11 @@ import { TaskCard } from '@/components/today/TaskCard'
 import { DayCloser } from '@/components/today/DayCloser'
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { SkeletonCard, SkeletonStats } from '@/components/shared/Skeleton'
+import { SkeletonStats } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
 import { DailyTask, DailyTaskStatus, Priority, SubtaskStatus, Task, Project } from '@/lib/types'
-import { Plus, Inbox } from 'lucide-react'
+import { normalizeExternalUrl } from '@/lib/utils'
+import { Plus, Inbox, Clock, ExternalLink, Repeat2, Tag } from 'lucide-react'
 import Link from 'next/link'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
@@ -32,6 +33,13 @@ const listVariants = {
 const itemVariants = {
   hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
+}
+
+function formatMeetingTime(value: string | null | undefined): string | null {
+  if (!value) return null
+  const [h, m] = value.split(':')
+  if (!h || !m) return value
+  return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`
 }
 
 export default function TodayPage() {
@@ -77,7 +85,7 @@ export default function TodayPage() {
             try {
               const sessions = await api.timers.sessions(t.id)
               const active = sessions.find((s) => !s.stopped_at)
-              console.log('[timer] task:', t.id, 'status:', t.status, 'live_total_seconds:', (t as any).live_total_seconds, 'total_seconds:', t.total_seconds, 'sessions:', sessions.length, 'active:', !!active)
+              console.log('[timer] task:', t.id, 'status:', t.status, 'live_total_seconds:', t.live_total_seconds, 'total_seconds:', t.total_seconds, 'sessions:', sessions.length, 'active:', !!active)
               return active ? ([t.id, active.started_at] as const) : null
             } catch {
               return null
@@ -454,6 +462,9 @@ export default function TodayPage() {
             <div className="space-y-2">
               {suggested.map((task) => {
                 const project = projects.find((p) => p.id === task.project_id)
+                const isRecurringSuggestion = task.id.startsWith('recurring_')
+                const meetingTime = formatMeetingTime(task.meeting_time)
+                const safeExternalUrl = normalizeExternalUrl(task.external_url)
                 return (
                   <motion.div
                     key={task.id}
@@ -463,8 +474,37 @@ export default function TodayPage() {
                     <div className="flex items-center gap-3 min-w-0">
                       <PriorityBadge priority={task.priority} />
                       <span className="text-sm font-medium text-text truncate">{task.title}</span>
+                      {isRecurringSuggestion && (
+                        <span className="inline-flex items-center gap-1 text-xs text-accent bg-accent-soft px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          <Repeat2 className="w-3 h-3" />
+                        </span>
+                      )}
                       {task.source === 'jira' && task.external_key && (
                         <span className="text-xs text-accent font-mono flex-shrink-0">{task.external_key}</span>
+                      )}
+                      {meetingTime && (
+                        <span className="inline-flex items-center gap-1 text-xs text-[var(--info)] bg-[var(--info-soft)] px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          <Clock className="w-3 h-3" />
+                          {meetingTime}
+                        </span>
+                      )}
+                      {task.tag && (
+                        <span className="inline-flex items-center gap-1 text-xs text-[var(--warning)] bg-warning-soft px-1.5 py-0.5 rounded-full flex-shrink-0">
+                          <Tag className="w-3 h-3" />
+                          {task.tag}
+                        </span>
+                      )}
+                      {safeExternalUrl && (
+                        <a
+                          href={safeExternalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-accent hover:text-[var(--accent-hover)] flex-shrink-0"
+                          title={safeExternalUrl}
+                        >
+                          Enlace
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
                       )}
                       {project && (
                         <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: project.color }} />
@@ -575,7 +615,11 @@ export default function TodayPage() {
                   >
                     {suggested.map((task) => {
                       const project = projects.find((p) => p.id === task.project_id)
-                      const alreadyInPlan = tasks.some((t) => t.task_id === task.id)
+                      const isRecurringSuggestion = task.id.startsWith('recurring_')
+                      const recurringId = isRecurringSuggestion ? task.id.replace('recurring_', '') : null
+                      const alreadyInPlan = tasks.some((t) => t.task_id === task.id || t.recurring_task_id === recurringId)
+                      const meetingTime = formatMeetingTime(task.meeting_time)
+                      const safeExternalUrl = normalizeExternalUrl(task.external_url)
 
                       return (
                         <motion.div
@@ -592,8 +636,37 @@ export default function TodayPage() {
                             <span className={`text-sm truncate ${alreadyInPlan ? 'text-text-subtle' : 'text-text'}`}>
                               {task.title}
                             </span>
+                            {isRecurringSuggestion && (
+                              <span className="inline-flex items-center gap-1 text-xs text-accent bg-accent-soft px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                <Repeat2 className="w-3 h-3" />
+                              </span>
+                            )}
                             {task.source === 'jira' && task.external_key && (
                               <span className="text-xs text-accent font-mono flex-shrink-0">{task.external_key}</span>
+                            )}
+                            {meetingTime && (
+                              <span className="inline-flex items-center gap-1 text-xs text-[var(--info)] bg-[var(--info-soft)] px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                <Clock className="w-3 h-3" />
+                                {meetingTime}
+                              </span>
+                            )}
+                            {task.tag && (
+                              <span className="inline-flex items-center gap-1 text-xs text-[var(--warning)] bg-warning-soft px-1.5 py-0.5 rounded-full flex-shrink-0">
+                                <Tag className="w-3 h-3" />
+                                {task.tag}
+                              </span>
+                            )}
+                            {safeExternalUrl && (
+                              <a
+                                href={safeExternalUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-accent hover:text-[var(--accent-hover)] flex-shrink-0"
+                                title={safeExternalUrl}
+                              >
+                                Enlace
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
                             )}
                             {project && (
                               <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: project.color }} />

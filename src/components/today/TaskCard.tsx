@@ -12,8 +12,8 @@ import { TaskTimer } from '@/components/today/TaskTimer'
 import { SubtaskList } from '@/components/today/SubtaskList'
 import { TaskComments } from '@/components/today/TaskComments'
 import { Modal } from '@/components/shared/Modal'
-import { formatDuration, projectTypeLabel } from '@/lib/utils'
-import { ChevronDown, ChevronRight, CheckCircle2, Repeat2, X, FileText, RotateCcw, AlertTriangle, ExternalLink } from 'lucide-react'
+import { formatDuration, normalizeExternalUrl, projectTypeLabel } from '@/lib/utils'
+import { ChevronDown, ChevronRight, CheckCircle2, Repeat2, X, FileText, RotateCcw, AlertTriangle, ExternalLink, Tag, Plus } from 'lucide-react'
 
 interface TaskCardProps {
   task: DailyTask
@@ -60,6 +60,7 @@ export function TaskCard({
   const isRecurring = !!task.recurring_task_id
   const hasDescription = !!task.description && task.description.trim().length > 0
   const canEditDescription = !!onUpdateDescription && !!task.task_id
+  const safeExternalUrl = normalizeExternalUrl(task.external_url)
 
   const openDescription = () => {
     setDescriptionDraft(task.description ?? '')
@@ -189,14 +190,14 @@ export function TaskCard({
                       <FileText className="w-3.5 h-3.5" />
                     </button>
                   )}
-                  {task.external_url && (
+                  {safeExternalUrl && (
                     <a
-                      href={task.external_url}
+                      href={safeExternalUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
                       className="inline-flex items-center gap-1 text-xs font-mono text-accent hover:text-[var(--accent-hover)] hover:bg-accent-soft px-1.5 py-0.5 rounded-md transition-colors whitespace-nowrap flex-shrink-0"
-                      title={task.external_url}
+                      title={safeExternalUrl}
                     >
                       {task.external_key || 'Abrir'}
                       <ExternalLink className="w-3 h-3" />
@@ -205,6 +206,12 @@ export function TaskCard({
                   {isRecurring && (
                     <span className="flex items-center gap-1 text-xs text-accent bg-accent-soft px-1.5 py-0.5 rounded-full flex-shrink-0" title="Tarea recurrente">
                       <Repeat2 className="w-3 h-3" />
+                    </span>
+                  )}
+                  {task.tag && (
+                    <span className="flex items-center gap-1 text-xs text-[var(--warning)] bg-warning-soft px-1.5 py-0.5 rounded-full flex-shrink-0" title="Tag">
+                      <Tag className="w-3 h-3" />
+                      {task.tag}
                     </span>
                   )}
                 </div>
@@ -233,6 +240,17 @@ export function TaskCard({
                     )
                   })()}
                 </div>
+
+                {isRecurring && !expanded && !isCompleted && (
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(true)}
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-[var(--accent-hover)] hover:bg-accent-soft px-2 py-1 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Añadir subtareas del día
+                  </button>
+                )}
               </div>
 
               {task.project && (

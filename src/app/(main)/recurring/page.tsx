@@ -7,8 +7,9 @@ import { ProjectBadge } from '@/components/tasks/ProjectBadge'
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
 import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
-import { RecurringTask, Project } from '@/lib/types'
-import { Plus, Repeat2, Trash2, Pencil, History, CheckCircle2, XCircle } from 'lucide-react'
+import { RecurringTask, RecurringInstance, Project } from '@/lib/types'
+import { normalizeExternalUrl } from '@/lib/utils'
+import { Plus, Repeat2, Trash2, Pencil, History, CheckCircle2, XCircle, Clock, ExternalLink, Tag } from 'lucide-react'
 import { RecurringTaskForm } from '@/components/recurring/RecurringTaskForm'
 
 const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -22,6 +23,13 @@ function formatRecurrence(task: RecurringTask): string {
     return `Día${task.recurrence_days.length > 1 ? 's' : ''} ${task.recurrence_days.join(', ')}`
   }
   return ''
+}
+
+function formatMeetingTime(value: string | null | undefined): string | null {
+  if (!value) return null
+  const [h, m] = value.split(':')
+  if (!h || !m) return value
+  return `${h.padStart(2, '0')}:${m.padStart(2, '0')}`
 }
 
 const listVariants = {
@@ -41,11 +49,7 @@ export default function RecurringPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingTask, setEditingTask] = useState<RecurringTask | null>(null)
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null)
-  const [historyData, setHistoryData] = useState<Record<string, unknown[]>>({})
-
-  useEffect(() => {
-    loadData()
-  }, [])
+  const [historyData, setHistoryData] = useState<Record<string, RecurringInstance[]>>({})
 
   const loadData = async () => {
     try {
@@ -61,6 +65,10 @@ export default function RecurringPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadData()
+  }, [])
 
   const handleToggle = async (task: RecurringTask) => {
     try {
@@ -161,6 +169,8 @@ export default function RecurringPage() {
             {tasks.map((task) => {
               const project = projects.find((p) => p.id === task.project_id)
               const isExpanded = expandedHistory === task.id
+              const meetingTime = formatMeetingTime(task.meeting_time)
+              const safeExternalUrl = normalizeExternalUrl(task.external_url)
 
               return (
                 <motion.div
@@ -182,9 +192,38 @@ export default function RecurringPage() {
                         <div className="flex items-center gap-3 flex-wrap mt-2">
                           <ProjectBadge project={project} size="sm" />
                           <PriorityBadge priority={task.priority} size="sm" />
+                          {task.category && (
+                            <span className="text-xs px-2 py-0.5 bg-bg-muted text-text-muted border border-border rounded-full font-medium">
+                              {task.category}
+                            </span>
+                          )}
                           <span className="text-xs px-2 py-0.5 bg-accent-soft text-accent rounded-full font-medium">
                             {formatRecurrence(task)}
                           </span>
+                          {meetingTime && (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-[var(--info-soft)] text-[var(--info)] border border-[var(--info)]/30 rounded-full font-medium">
+                              <Clock className="w-3 h-3" />
+                              {meetingTime}
+                            </span>
+                          )}
+                          {task.tag && (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-warning-soft text-[var(--warning)] border border-[var(--warning)]/30 rounded-full font-medium">
+                              <Tag className="w-3 h-3" />
+                              {task.tag}
+                            </span>
+                          )}
+                          {safeExternalUrl && (
+                            <a
+                              href={safeExternalUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-accent-soft text-accent rounded-full font-medium hover:bg-accent hover:text-accent-fg transition-colors"
+                              title={safeExternalUrl}
+                            >
+                              Enlace
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          )}
                           <span className="text-xs text-text-subtle">
                             {task.completed_count}/{task.instances_count} completadas
                           </span>
@@ -237,7 +276,7 @@ export default function RecurringPage() {
                         Historial reciente
                       </h4>
                       <div className="space-y-1.5">
-                        {(historyData[task.id] as any[]).map((instance) => (
+                        {historyData[task.id].map((instance) => (
                           <div key={instance.id} className="flex items-center justify-between text-sm">
                             <span className="text-text-muted">
                               {new Date(instance.date).toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short' })}

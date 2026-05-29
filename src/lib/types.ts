@@ -7,7 +7,7 @@ export interface User {
 
 export type ProjectType = 'work' | 'business' | 'partner' | 'personal'
 
-export type TaskSource = 'manual' | 'jira'
+export type TaskSource = 'manual' | 'jira' | 'recurring'
 
 export type TaskStatus = 'backlog' | 'active' | 'done' | 'archived'
 
@@ -30,6 +30,9 @@ export interface RecurringTask {
   description?: string
   priority: Priority
   category?: string
+  meeting_time?: string
+  external_url?: string
+  tag?: string
   recurrence_type: RecurringTaskType
   recurrence_days: number[] | null
   is_active: boolean
@@ -81,6 +84,7 @@ export interface Task {
   due_date?: string
   category?: string
   meeting_time?: string
+  tag?: string
   subtasks?: Subtask[]
   created_at: string
   updated_at: string
@@ -106,6 +110,7 @@ export interface DailyTask {
   description?: string
   external_key?: string
   external_url?: string
+  tag?: string
   category?: string
   due_date?: string
   meeting_time?: string

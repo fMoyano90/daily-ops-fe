@@ -5,6 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function normalizeExternalUrl(value: string | null | undefined): string | null {
+  const cleaned = value?.trim()
+  if (!cleaned || /[\r\n\t]/.test(cleaned) || !/^https?:\/\//i.test(cleaned)) return null
+
+  try {
+    const url = new URL(cleaned)
+    return url.protocol === 'http:' || url.protocol === 'https:' ? cleaned : null
+  } catch {
+    return null
+  }
+}
+
 export function formatDuration(seconds: number): string {
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
