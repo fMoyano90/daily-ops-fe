@@ -25,6 +25,7 @@ interface TaskCardProps {
   onUpdateDescription?: (taskId: string, description: string) => Promise<void> | void
   onUpdateCategory?: (taskId: string, data: { category: string | null; due_date?: string | null; meeting_time?: string | null; reminder_minutes_before?: number | null }) => Promise<void> | void
   onRemove?: (taskId: string) => void
+  onReopen?: (taskId: string) => void
   onStartTimer: (taskId: string) => void
   onPauseTimer: (taskId: string) => void
   onResumeTimer: (taskId: string) => void
@@ -42,6 +43,7 @@ export function TaskCard({
   onUpdateDescription,
   onUpdateCategory,
   onRemove,
+  onReopen,
   onStartTimer,
   onPauseTimer,
   onResumeTimer,
@@ -122,6 +124,15 @@ export function TaskCard({
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
           Finalizar
+        </button>
+      )}
+      {isCompleted && onReopen && (
+        <button
+          onClick={() => onReopen(task.id)}
+          className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3 py-2 bg-warning-soft text-[var(--warning)] text-xs font-medium rounded-lg hover:bg-[var(--warning)] hover:text-[var(--warning-fg)] transition-colors whitespace-nowrap"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Reabrir
         </button>
       )}
       {isRecurring && !isCompleted && onRemove && (

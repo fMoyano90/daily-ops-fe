@@ -479,6 +479,15 @@ export default function TodayPage() {
     }
   }
 
+  const handleReopenTask = async (taskId: string) => {
+    try {
+      const updated = await api.dailyTasks.reopen(taskId)
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)))
+    } catch (err) {
+      console.error('Failed to reopen task:', err)
+    }
+  }
+
   const handleCloseDay = async () => {
     try {
       await api.dailyPlans.close(planId)
@@ -658,8 +667,8 @@ export default function TodayPage() {
               {sortedTasks.map((task) => (
                 <motion.div key={task.id} variants={itemVariants}>
                   <SwipeAction
-                    disabled={task.status === 'completed'}
-                    onSwipeRight={() => handleUpdateStatus(task.id, 'completed')}
+                    disabled={false}
+                    onSwipeRight={() => task.status === 'completed' ? handleReopenTask(task.id) : handleUpdateStatus(task.id, 'completed')}
                     onSwipeLeft={() => handleRemoveFromToday(task.id)}
                   >
                     <TaskCard
@@ -673,6 +682,7 @@ export default function TodayPage() {
                       onUpdateDescription={handleUpdateDescription}
                       onUpdateCategory={handleUpdateCategory}
                       onRemove={handleRemoveFromToday}
+                      onReopen={handleReopenTask}
                       onStartTimer={handleStartTimer}
                       onPauseTimer={handlePauseTimer}
                       onResumeTimer={handleResumeTimer}

@@ -222,6 +222,8 @@ export const api = {
       fetchApi<DailyTask>(`/daily-tasks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     complete: (id: string) =>
       fetchApi<DailyTask>(`/daily-tasks/${id}/complete`, { method: 'POST' }),
+    reopen: (id: string) =>
+      fetchApi<DailyTask>(`/daily-tasks/${id}/reopen`, { method: 'POST' }),
     remove: (id: string) => fetchApi<void>(`/daily-tasks/${id}`, { method: 'DELETE' }),
   },
 
