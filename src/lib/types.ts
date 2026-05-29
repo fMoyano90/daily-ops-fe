@@ -297,6 +297,49 @@ export interface EmotionSummary {
   by_valence: Record<string, number>
 }
 
+export interface DailyReflection {
+  id: string
+  user_id: string
+  daily_plan_id?: string | null
+  went_well?: string | null
+  drained_me?: string | null
+  learned?: string | null
+  grateful_for?: string | null
+  improve_tomorrow?: string | null
+  mood_rating?: number | null
+  energy_rating?: number | null
+  productivity_rating?: number | null
+  note?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface DailyReflectionInput {
+  went_well?: string
+  drained_me?: string
+  learned?: string
+  grateful_for?: string
+  improve_tomorrow?: string
+  mood_rating?: number
+  energy_rating?: number
+  productivity_rating?: number
+  note?: string
+}
+
+export interface DailyReflectionSummary {
+  period_start: string
+  period_end: string
+  total_reflections: number
+  days_with_reflection: number
+  days_without_reflection: number
+  avg_mood?: number | null
+  avg_energy?: number | null
+  avg_productivity?: number | null
+  mood_trend: 'up' | 'down' | 'stable'
+  energy_trend: 'up' | 'down' | 'stable'
+  productivity_trend: 'up' | 'down' | 'stable'
+}
+
 export interface JiraTestResult {
   ok: boolean
   account_id?: string | null

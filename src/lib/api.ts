@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -206,8 +206,11 @@ export const api = {
         body: JSON.stringify(data),
       }),
     getSuggestions: () => fetchApi<Record<string, Task[]>>('/daily-plans/today/suggestions'),
-    close: (planId: string) =>
-      fetchApi<Record<string, unknown>>(`/daily-plans/${planId}/close`, { method: 'POST' }),
+    close: (planId: string, reflection?: DailyReflectionInput) =>
+      fetchApi<Record<string, unknown>>(`/daily-plans/${planId}/close`, {
+        method: 'POST',
+        body: JSON.stringify(reflection ? { reflection } : {}),
+      }),
     reopen: (planId: string) =>
       fetchApi<Record<string, unknown>>(`/daily-plans/${planId}/reopen`, { method: 'POST' }),
     reorder: (planId: string, taskIds: string[]) =>
@@ -431,6 +434,29 @@ export const api = {
     weeklySummary: (weekStart?: string) => {
       const qs = weekStart ? `?week_start=${weekStart}` : ''
       return fetchApi<EmotionSummary>(`/emotions/summary/week${qs}`)
+    },
+  },
+
+  dailyReflections: {
+    today: () => fetchApi<DailyReflection | null>('/daily-reflections/today'),
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<DailyReflection[]>(`/daily-reflections${qs}`)
+    },
+    getByDate: (date: string) => fetchApi<DailyReflection>(`/daily-reflections/${date}`),
+    update: (id: string, data: DailyReflectionInput) =>
+      fetchApi<DailyReflection>(`/daily-reflections/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    delete: (id: string) => fetchApi<void>(`/daily-reflections/${id}`, { method: 'DELETE' }),
+    weeklySummary: (weekStart?: string) => {
+      const qs = weekStart ? `?week_start=${weekStart}` : ''
+      return fetchApi<DailyReflectionSummary>(`/daily-reflections/summary/week${qs}`)
+    },
+    monthlySummary: (month?: string) => {
+      const qs = month ? `?month=${month}` : ''
+      return fetchApi<DailyReflectionSummary>(`/daily-reflections/summary/month${qs}`)
     },
   },
 }
