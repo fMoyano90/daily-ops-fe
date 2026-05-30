@@ -89,7 +89,7 @@ export function Modal({ open, isOpen, onClose, children, maxWidth, size = 'md', 
   return createPortal(
     <AnimatePresence>
       {isOpenState && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-[calc(2rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))] sm:items-center sm:py-4">
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-[calc(1rem+env(safe-area-inset-top))] pb-[calc(2rem+env(safe-area-inset-bottom))] sm:items-center sm:py-4">
           <motion.div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
