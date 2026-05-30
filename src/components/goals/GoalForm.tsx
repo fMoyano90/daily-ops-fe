@@ -106,7 +106,7 @@ export function GoalForm({ open, onClose, onSubmit, projects, initialData }: Goa
 
   return (
     <Modal open={open} onClose={handleClose} title={isEditing ? 'Editar meta' : 'Nueva meta'} size="lg">
-      <form onSubmit={handleSubmit} className="flex max-h-[calc(100dvh-9rem)] flex-col sm:max-h-[75vh]">
+      <form onSubmit={handleSubmit} className="flex max-h-[calc(100dvh-8rem)] flex-col sm:max-h-[75vh]">
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 scroll-pb-6">
           <div>
             <label htmlFor={titleId} className={labelClass}>Título de la meta *</label>

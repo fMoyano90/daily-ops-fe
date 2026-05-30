@@ -62,9 +62,10 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Name */}
-      <div>
+    <form onSubmit={handleSubmit} className="flex max-h-[calc(100dvh-8rem)] flex-col sm:max-h-[75vh]">
+      <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 scroll-pb-6">
+        {/* Name */}
+        <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">¿Qué conducta querés cambiar? *</label>
         <input
           value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
@@ -74,8 +75,8 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
         />
       </div>
 
-      {/* Category */}
-      <div>
+        {/* Category */}
+        <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">Categoría</label>
         <div className="grid grid-cols-2 gap-2">
           {categories.map((c) => (
@@ -88,8 +89,8 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
         </div>
       </div>
 
-      {/* Tracking mode */}
-      <div>
+        {/* Tracking mode */}
+        <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">¿Cómo querés medirlo?</label>
         <div className="grid grid-cols-2 gap-2">
           <button type="button" onClick={() => setForm((p) => ({ ...p, tracking_mode: 'abstinence' }))}
@@ -105,8 +106,8 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
         </div>
       </div>
 
-      {/* Motivation */}
-      <div>
+        {/* Motivation */}
+        <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">¿Por qué querés cambiar esto?</label>
         <textarea
           rows={2} value={form.motivation} onChange={(e) => setForm((p) => ({ ...p, motivation: e.target.value }))}
@@ -115,8 +116,8 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
         />
       </div>
 
-      {/* Triggers */}
-      <div>
+        {/* Triggers */}
+        <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">Gatillantes conocidos</label>
         <div className="flex gap-2 mb-2">
           <input value={triggerInput} onChange={(e) => setTriggerInput(e.target.value)}
@@ -139,8 +140,8 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
         )}
       </div>
 
-      {/* Coping strategies */}
-      <div>
+        {/* Coping strategies */}
+        <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">Estrategias que te ayudan</label>
         <div className="flex gap-2 mb-2">
           <input value={strategyInput} onChange={(e) => setStrategyInput(e.target.value)}
@@ -163,8 +164,8 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
         )}
       </div>
 
-      {/* Action plan */}
-      <div>
+        {/* Action plan */}
+        <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">Plan de acción (opcional)</label>
         <textarea
           rows={3} value={form.action_plan} onChange={(e) => setForm((p) => ({ ...p, action_plan: e.target.value }))}
@@ -173,13 +174,15 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
         />
       </div>
 
-      <div className="flex gap-2 pt-1">
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-border bg-bg-elevated px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-end sm:px-6 sm:py-4">
         <button type="submit" disabled={saving || !form.name.trim()}
-          className="flex-1 py-2.5 rounded-lg bg-accent text-white font-medium text-sm hover:bg-accent/90 transition-colors disabled:opacity-50">
+          className="w-full rounded-lg bg-accent px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-accent/90 disabled:opacity-50 sm:w-auto sm:py-2.5">
           {saving ? 'Guardando...' : initial ? 'Guardar cambios' : 'Crear hábito'}
         </button>
         <button type="button" onClick={onCancel}
-          className="px-4 py-2.5 rounded-lg border border-border text-text-muted text-sm hover:border-text-muted transition-colors">
+          className="w-full rounded-lg border border-border px-4 py-3 text-sm text-text-muted transition-colors hover:border-text-muted sm:w-auto sm:py-2.5">
           Cancelar
         </button>
       </div>
