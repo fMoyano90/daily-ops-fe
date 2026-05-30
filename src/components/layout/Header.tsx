@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Sun, Moon, Command, LogOut } from 'lucide-react'
+import { Sun, Moon, LogOut } from 'lucide-react'
 import { formatDateFull, getTodayStr } from '@/lib/utils'
 import { useThemeStore } from '@/lib/theme'
 import { useAuthStore } from '@/stores/authStore'
@@ -58,7 +58,7 @@ export function Header({ title, subtitle }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-md border-b border-border pt-8 pb-4 md:pt-10 md:pb-6 safe-pt safe-pl safe-pr">
       {/* Title flush-left in main, just past the sidebar's edge */}
-      <div className="pl-4 md:pl-8 pr-[180px] md:pr-[340px] pt-3">
+      <div className="pl-4 md:pl-8 pr-24 md:pr-[300px] pt-3">
         <h2 className="text-lg md:text-2xl font-bold text-text truncate">{title || 'Today'}</h2>
         {subtitle && (
           <p className="hidden md:block text-sm text-text-muted mt-0.5">{subtitle}</p>
@@ -66,7 +66,7 @@ export function Header({ title, subtitle }: HeaderProps) {
       </div>
 
       {/* Right zone: date/time/icons pinned to viewport right edge */}
-      <div className="absolute top-0 right-0 h-full safe-pr pr-3 md:pr-8 flex items-center gap-1 md:gap-3">
+      <div className="absolute right-0 top-[env(safe-area-inset-top)] h-[calc(100%-env(safe-area-inset-top))] safe-pr pr-3 md:right-0 md:top-0 md:h-full md:pr-8 flex items-center gap-1 md:gap-3">
         {/* Date + time — desktop only */}
         <div className="hidden md:block text-right mr-2">
           <p className="text-sm font-medium text-text-muted capitalize">
@@ -85,15 +85,6 @@ export function Header({ title, subtitle }: HeaderProps) {
             )}
           </AnimatePresence>
         </div>
-
-        {/* Command palette — desktop only */}
-        <button
-          className="hidden md:inline-flex touch-target rounded-lg text-text-subtle hover:text-text hover:bg-bg-muted transition-colors"
-          title="Paleta de comandos (próximamente ⌘K)"
-          onClick={() => { }}
-        >
-          <Command className="w-4 h-4" />
-        </button>
 
         {/* Theme toggle */}
         <button
