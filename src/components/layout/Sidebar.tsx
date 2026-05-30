@@ -20,6 +20,7 @@ import {
   UtensilsCrossed,
   HeartPulse,
   Sprout,
+  Wallet,
 } from 'lucide-react'
 
 const navItems = [
@@ -33,6 +34,7 @@ const navItems = [
   { href: '/sleep', label: 'Sleep', icon: Moon },
   { href: '/nutrition', label: 'Nutrition', icon: UtensilsCrossed },
   { href: '/health', label: 'Salud', icon: HeartPulse },
+  { href: '/finances', label: 'Finanzas', icon: Wallet },
   { href: '/history', label: 'History', icon: Clock },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]

@@ -13,7 +13,7 @@ import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
 import { Task, Project, Priority, SubtaskStatus } from '@/lib/types'
 import { formatDuration, normalizeExternalUrl, sourceLabel } from '@/lib/utils'
-import { ListFilter, Plus, ExternalLink, CalendarDays, ChevronDown, ChevronRight, CheckCircle2, Circle, Repeat2, Bell } from 'lucide-react'
+import { ListFilter, Plus, ExternalLink, CalendarDays, ChevronDown, ChevronRight, CheckCircle2, Circle, Repeat2, Bell, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 const listVariants = {
@@ -43,10 +43,13 @@ export default function BacklogPage() {
   const [estimateValue, setEstimateValue] = useState('')
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [titleValue, setTitleValue] = useState('')
+  const [editingDescription, setEditingDescription] = useState<string | null>(null)
+  const [descriptionValue, setDescriptionValue] = useState('')
   const [editingPriority, setEditingPriority] = useState<string | null>(null)
   const [editingProject, setEditingProject] = useState<string | null>(null)
   const [addingRecurring, setAddingRecurring] = useState<string | null>(null)
   const [addingToToday, setAddingToToday] = useState<string | null>(null)
+  const [deletingTask, setDeletingTask] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     try {
@@ -170,6 +173,55 @@ export default function BacklogPage() {
       setTitleValue('')
     } catch (err) {
       console.error('Failed to update title:', err)
+    }
+  }
+
+  const handleSaveDescription = async (task: Task) => {
+    const trimmed = descriptionValue.trim()
+    const value = trimmed.length > 0 ? trimmed : null
+
+    try {
+      if (task.is_recurring && task.recurring_task_id) {
+        await api.recurringTasks.update(task.recurring_task_id, { description: value })
+      } else {
+        await api.tasks.update(task.id, { description: value })
+      }
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          task.is_recurring && task.recurring_task_id
+            ? (t.recurring_task_id === task.recurring_task_id ? { ...t, description: value ?? undefined } : t)
+            : (t.id === task.id ? { ...t, description: value ?? undefined } : t)
+        )
+      )
+      setEditingDescription(null)
+      setDescriptionValue('')
+    } catch (err) {
+      console.error('Failed to update description:', err)
+    }
+  }
+
+  const handleDeleteTask = async (task: Task) => {
+    if (!window.confirm(`¿Eliminar "${task.title}" del backlog? Esta acción no se puede deshacer.`)) return
+
+    setDeletingTask(task.id)
+    try {
+      if (task.is_recurring && task.recurring_task_id) {
+        await api.recurringTasks.delete(task.recurring_task_id)
+      } else {
+        await api.tasks.delete(task.id)
+      }
+
+      setTasks((prev) => prev.filter((t) => task.is_recurring && task.recurring_task_id ? t.recurring_task_id !== task.recurring_task_id : t.id !== task.id))
+      setExpandedTasks((prev) => {
+        const next = new Set(prev)
+        next.delete(task.id)
+        return next
+      })
+    } catch (err) {
+      console.error('Failed to delete task:', err)
+    } finally {
+      setDeletingTask(null)
     }
   }
 
@@ -348,6 +400,7 @@ export default function BacklogPage() {
               const subtasks = task.subtasks || []
               const completedSubtasks = subtasks.filter((s) => s.status === 'completed').length
               const safeExternalUrl = normalizeExternalUrl(task.external_url)
+              const descriptionInputId = `task-description-${task.id}`
 
               return (
                 <motion.div
@@ -497,6 +550,53 @@ export default function BacklogPage() {
 
                     {isExpanded && (
                       <div className="mt-4 pt-4 border-t border-border space-y-4">
+                        <div>
+                          <label htmlFor={descriptionInputId} className="block text-xs font-medium text-text-subtle mb-1.5">Descripción</label>
+                          {editingDescription === task.id ? (
+                            <form
+                              onSubmit={(e) => {
+                                e.preventDefault()
+                                handleSaveDescription(task)
+                              }}
+                              className="space-y-2"
+                            >
+                              <textarea
+                                id={descriptionInputId}
+                                name="description"
+                                value={descriptionValue}
+                                onChange={(e) => setDescriptionValue(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSaveDescription(task) }
+                                  else if (e.key === 'Escape') { setEditingDescription(null); setDescriptionValue('') }
+                                }}
+                                placeholder="Escribe una descripción para esta tarea..."
+                                rows={4}
+                                maxLength={4000}
+                                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent resize-y"
+                                autoFocus
+                              />
+                              <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+                                <button type="button" onClick={() => { setEditingDescription(null); setDescriptionValue('') }} className="px-3 py-2 border border-border text-text-muted text-sm font-medium rounded-lg hover:bg-bg-muted transition-colors">Cancelar</button>
+                                <button type="submit" className="px-3 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors">Guardar descripción</button>
+                              </div>
+                            </form>
+                          ) : (
+                            <div className="space-y-2">
+                              {task.description?.trim() ? (
+                                <p className="text-sm text-text-muted whitespace-pre-wrap">{task.description}</p>
+                              ) : (
+                                <p className="text-sm text-text-subtle italic">Esta tarea no tiene descripción.</p>
+                              )}
+                              <button
+                                onClick={() => { setEditingDescription(task.id); setDescriptionValue(task.description ?? '') }}
+                                className="text-sm text-accent hover:text-[var(--accent-hover)] font-medium transition-colors"
+                              >
+                                {task.description?.trim() ? 'Editar descripción' : 'Añadir descripción'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
                         {!task.is_recurring && (
                           <div>
                             <label className="block text-xs font-medium text-text-subtle mb-1.5">Tiempo estimado</label>
@@ -612,6 +712,17 @@ export default function BacklogPage() {
                               <Plus className="w-4 h-4" /> Añadir subtarea
                             </button>
                           )}
+                        </div>
+
+                        <div className="pt-4 border-t border-border">
+                          <button
+                            onClick={() => handleDeleteTask(task)}
+                            disabled={deletingTask === task.id}
+                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--danger)] bg-danger-soft rounded-lg hover:bg-[var(--danger)] hover:text-[var(--danger-fg)] transition-colors disabled:opacity-60"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {deletingTask === task.id ? 'Eliminando...' : 'Eliminar tarea'}
+                          </button>
                         </div>
                       </div>
                     )}

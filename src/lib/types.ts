@@ -792,3 +792,41 @@ export interface JiraTestResult {
   email?: string | null
   error?: string | null
 }
+
+// ─── Finances ─────────────────────────────────────────────────────────────────
+
+export type FinanceEntryType = 'income' | 'expense'
+
+export interface FinanceEntry {
+  id: string
+  date: string
+  type: FinanceEntryType
+  amount: number
+  category: string
+  description?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface FinanceEntryCreate {
+  date: string
+  type: FinanceEntryType
+  amount: number
+  category: string
+  description?: string | null
+}
+
+export interface FinanceEntryUpdate {
+  date?: string
+  type?: FinanceEntryType
+  amount?: number
+  category?: string
+  description?: string | null
+}
+
+export interface FinanceSummary {
+  date: string
+  total_income: number
+  total_expense: number
+  balance: number
+}

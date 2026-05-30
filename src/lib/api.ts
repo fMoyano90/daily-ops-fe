@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceSummary } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -612,5 +612,17 @@ export const api = {
       const qs = params ? '?' + new URLSearchParams(params).toString() : ''
       return fetchApi<HabitSummary>(`/habits/${habitId}/summary${qs}`)
     },
+  },
+  finances: {
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<FinanceEntry[]>(`/finances/entries${qs}`)
+    },
+    create: (data: FinanceEntryCreate) =>
+      fetchApi<FinanceEntry>('/finances/entries', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: FinanceEntryUpdate) =>
+      fetchApi<FinanceEntry>(`/finances/entries/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<void>(`/finances/entries/${id}`, { method: 'DELETE' }),
+    summary: (date: string) => fetchApi<FinanceSummary>(`/finances/summary?date=${date}`),
   },
 }
