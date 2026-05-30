@@ -159,6 +159,15 @@ select {
   background-color: var(--bg-elevated);
   color: var(--text);
   border-color: var(--border);
+  font-size: 1rem; /* prevents iOS Safari auto-zoom (triggered when font-size < 16px) */
+}
+
+@media (max-width: 639px) {
+  input.text-sm,
+  textarea.text-sm,
+  select.text-sm {
+    font-size: 1rem;
+  }
 }
 
 input::placeholder,

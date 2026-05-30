@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'motion/react'
 import { X } from 'lucide-react'
@@ -19,6 +19,9 @@ const sizeMap = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-2xl', xl: 'max-w-4x
 
 export function Modal({ open, isOpen, onClose, children, maxWidth, size = 'md', title }: ModalProps) {
   const isOpenState = open ?? isOpen ?? false
+  const panelRef = useRef<HTMLDivElement>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+  const titleId = useId()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -27,14 +30,56 @@ export function Modal({ open, isOpen, onClose, children, maxWidth, size = 'md', 
 
   useEffect(() => {
     if (!isOpenState) return
+    previouslyFocusedRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    window.requestAnimationFrame(() => {
+      const panel = panelRef.current
+      const field = panel?.querySelector<HTMLElement>('input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled])')
+      const target = field ?? panel?.querySelector<HTMLElement>('button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')
+      const focusTarget = target ?? panel
+      focusTarget?.focus()
+    })
+    return () => {
+      document.body.style.overflow = prev
+      if (previouslyFocusedRef.current && document.contains(previouslyFocusedRef.current)) {
+        previouslyFocusedRef.current.focus()
+      }
+      previouslyFocusedRef.current = null
+    }
   }, [isOpenState])
 
   useEffect(() => {
     if (!isOpenState) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab') return
+
+      const panel = panelRef.current
+      if (!panel) return
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>('button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')
+      ).filter((element) => element.offsetParent !== null)
+
+      if (focusable.length === 0) {
+        e.preventDefault()
+        panel.focus()
+        return
+      }
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [isOpenState, onClose])
@@ -54,6 +99,12 @@ export function Modal({ open, isOpen, onClose, children, maxWidth, size = 'md', 
             onClick={onClose}
           />
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? titleId : undefined}
+            aria-label={title ? undefined : 'Modal'}
+            tabIndex={-1}
             className={`relative bg-bg-elevated rounded-2xl shadow-[var(--shadow-lg)] w-full ${maxWidth ?? sizeMap[size]} overflow-hidden`}
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -62,9 +113,9 @@ export function Modal({ open, isOpen, onClose, children, maxWidth, size = 'md', 
           >
             {title && (
               <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                <h2 className="text-lg font-bold text-text">{title}</h2>
-                <button onClick={onClose} className="p-1 text-text-subtle hover:text-text transition-colors">
-                  <X className="w-5 h-5" />
+                <h2 id={titleId} className="text-lg font-bold text-text">{title}</h2>
+                <button type="button" onClick={onClose} aria-label="Cerrar modal" className="p-1 text-text-subtle hover:text-text transition-colors">
+                  <X className="w-5 h-5" aria-hidden="true" />
                 </button>
               </div>
             )}

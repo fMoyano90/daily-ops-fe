@@ -107,7 +107,7 @@ export default function GoalsPage() {
           <GoalHorizonTabs active={activeTab} onChange={setActiveTab} />
           <button
             onClick={() => setFormOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors"
+            className="flex w-full items-center justify-center gap-2 px-4 py-2.5 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors sm:w-auto sm:py-2"
           >
             <Plus className="w-4 h-4" />
             Nueva meta
