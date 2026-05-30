@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
-import { Clock, Settings, Sun, Moon, LogOut, X, Target, SmilePlus, UtensilsCrossed, HeartPulse, Sprout } from 'lucide-react'
+import { Clock, Settings, Sun, Moon, LogOut, X, Target, SmilePlus, UtensilsCrossed, HeartPulse, Sprout, Wallet } from 'lucide-react'
 import { useThemeStore } from '@/lib/theme'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -149,6 +149,16 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                 >
                   <HeartPulse className="w-5 h-5 text-text-muted" />
                   Salud
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/finances"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
+                >
+                  <Wallet className="w-5 h-5 text-text-muted" />
+                  Finanzas
                 </Link>
               </li>
               <li>
