@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
-import { CalendarDays, ChevronLeft, ChevronRight, Droplets, Flame, RefreshCw, Sparkles, UtensilsCrossed } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Droplets, Flame, Pencil, RefreshCw, Sparkles, UtensilsCrossed } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
 import { SkeletonCard, SkeletonStats } from '@/components/shared/Skeleton'
@@ -70,6 +70,20 @@ function formatKcal(value?: number | null) {
   return value == null ? 'Sin datos' : `${value} kcal`
 }
 
+const activityLabels: Record<HealthProfile['activity_level'], string> = {
+  sedentary: 'Sedentario',
+  light: 'Ligero',
+  moderate: 'Moderado',
+  active: 'Activo',
+  very_active: 'Muy activo',
+}
+
+const nutritionGoalLabels: Record<HealthProfile['goal'], string> = {
+  lose: 'Bajar',
+  maintain: 'Mantener',
+  gain: 'Subir',
+}
+
 export default function NutritionPage() {
   const [selectedDate, setSelectedDate] = useState(() => getLocalDateValue())
   const [profile, setProfile] = useState<HealthProfile | null>(null)
@@ -82,6 +96,7 @@ export default function NutritionPage() {
   const [savingExercise, setSavingExercise] = useState(false)
   const [updatingWater, setUpdatingWater] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
+  const [editingProfile, setEditingProfile] = useState(false)
   const [timelineLoading, setTimelineLoading] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -135,6 +150,7 @@ export default function NutritionPage() {
       const saved = await api.nutrition.saveProfile(data)
       setProfile(saved)
       setStatusMessage('Perfil de salud guardado')
+      setEditingProfile(false)
       await loadData()
     } catch (err) {
       console.error('Failed to save health profile:', err)
@@ -275,11 +291,41 @@ export default function NutritionPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,430px)_1fr] gap-5 items-start">
           <section aria-labelledby="nutrition-profile-title" className={cn('bg-bg-elevated border rounded-2xl p-4 md:p-5 lg:sticky lg:top-28', profile ? 'border-border' : 'border-accent/50')}>
-            <div className="mb-5">
-              <h2 id="nutrition-profile-title" className="text-base font-semibold text-text">Perfil</h2>
-              <p className="text-sm text-text-muted mt-1">{profile ? 'Edita tu perfil si cambia peso, actividad u objetivo.' : 'Guarda tu perfil antes de analizar el día.'}</p>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h2 id="nutrition-profile-title" className="text-base font-semibold text-text">Perfil</h2>
+                <p className="text-sm text-text-muted mt-1">{profile ? 'Datos base para calcular tu objetivo diario.' : 'Guarda tu perfil antes de analizar el día.'}</p>
+              </div>
+              {profile && (
+                <button
+                  type="button"
+                  onClick={() => setEditingProfile((value) => !value)}
+                  aria-expanded={editingProfile}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-bg-muted hover:text-text"
+                >
+                  <Pencil className="w-4 h-4" aria-hidden="true" />
+                  {editingProfile ? 'Cerrar' : 'Editar'}
+                </button>
+              )}
             </div>
-            <HealthProfileForm key={profile?.updated_at ?? profile?.id ?? 'new'} profile={profile} saving={savingProfile} onSubmit={saveProfile} />
+
+            {profile && !editingProfile ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-3 gap-2 rounded-xl border border-border bg-bg p-3 text-center text-xs text-text-muted">
+                  <span><strong className="block text-sm text-text">{profile.bmr}</strong>BMR</span>
+                  <span><strong className="block text-sm text-text">{profile.tdee}</strong>TDEE</span>
+                  <span><strong className="block text-sm text-accent">{profile.recommended_calories}</strong>Objetivo</span>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs text-text-muted">
+                  <span className="rounded-full bg-bg px-2.5 py-1 border border-border">{profile.weight_kg} kg</span>
+                  <span className="rounded-full bg-bg px-2.5 py-1 border border-border">{profile.height_cm} cm</span>
+                  <span className="rounded-full bg-bg px-2.5 py-1 border border-border">{activityLabels[profile.activity_level]}</span>
+                  <span className="rounded-full bg-bg px-2.5 py-1 border border-border">{nutritionGoalLabels[profile.goal]}</span>
+                </div>
+              </div>
+            ) : (
+              <HealthProfileForm key={profile?.updated_at ?? profile?.id ?? 'new'} profile={profile} saving={savingProfile} onSubmit={saveProfile} />
+            )}
           </section>
 
           <section aria-label="Registro diario de nutrition" className="space-y-5">

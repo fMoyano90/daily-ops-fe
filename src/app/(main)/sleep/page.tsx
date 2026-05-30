@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback, useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Gauge, Moon, Plus, RefreshCw, Sparkles, Trash2, Waves } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, Gauge, Moon, Pencil, Plus, RefreshCw, Sparkles, Trash2, Waves } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonCard, SkeletonStats } from '@/components/shared/Skeleton'
@@ -87,6 +87,7 @@ export default function SleepPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [timelineLoading, setTimelineLoading] = useState(false)
+  const [editingSleepLog, setEditingSleepLog] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
   const [error, setError] = useState<string | null>(null)
 
@@ -118,6 +119,10 @@ export default function SleepPage() {
     return () => window.clearTimeout(timer)
   }, [loadData])
 
+  useEffect(() => {
+    setEditingSleepLog(false)
+  }, [selectedDate])
+
   const ptr = usePullToRefresh({ onRefresh: loadData })
   const todayValue = getLocalDateValue()
   const isSelectedToday = selectedDate === todayValue
@@ -134,6 +139,7 @@ export default function SleepPage() {
         : await api.sleepLogs.create(payload)
       setSelectedDate(saved.date)
       setSelectedLog(saved)
+      setEditingSleepLog(false)
       setStatusMessage(selectedLog ? 'Registro del sueño actualizado' : 'Registro del sueño guardado')
       await loadData()
     } catch (err) {
@@ -195,16 +201,46 @@ export default function SleepPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,430px)_1fr] gap-5 items-start">
           <section aria-labelledby="sleep-form-title" className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5 lg:sticky lg:top-28">
-            <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 id="sleep-form-title" className="text-base font-semibold text-text">{formTitle}</h2>
                 <p className="text-sm text-text-muted mt-1">{selectedLog ? 'Edita el registro existente.' : 'Aún no hay registro para esta fecha.'}</p>
               </div>
-              <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold', selectedLog ? 'bg-success-soft text-[var(--success)]' : 'bg-bg-muted text-text-muted')}>
-                {selectedLog ? 'Guardado' : 'Pendiente'}
-              </span>
+              <div className="flex flex-col items-end gap-2">
+                <span className={cn('px-2.5 py-1 rounded-full text-xs font-semibold', selectedLog ? 'bg-success-soft text-[var(--success)]' : 'bg-bg-muted text-text-muted')}>
+                  {selectedLog ? 'Guardado' : 'Pendiente'}
+                </span>
+                {selectedLog && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingSleepLog((value) => !value)}
+                    aria-expanded={editingSleepLog}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-muted transition-colors hover:bg-bg-muted hover:text-text"
+                  >
+                    <Pencil className="w-4 h-4" aria-hidden="true" />
+                    {editingSleepLog ? 'Cerrar' : 'Editar'}
+                  </button>
+                )}
+              </div>
             </div>
-            <SleepLogForm key={selectedLog?.id ?? selectedDate} date={selectedDate} initialLog={selectedLog} saving={saving} onSubmit={handleSave} />
+
+            {selectedLog && !editingSleepLog ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2 rounded-xl border border-border bg-bg p-3 text-center text-xs text-text-muted">
+                  <span><strong className="block text-sm text-text">{selectedLog.hours_slept ?? '--'}h</strong>Sueño</span>
+                  <span><strong className="block text-sm text-accent">{selectedLog.sleep_quality ?? '--'}/10</strong>Calidad</span>
+                  <span><strong className="block text-sm text-text">{formatTime(selectedLog.bedtime)} → {formatTime(selectedLog.wake_time)}</strong>Horario</span>
+                  <span><strong className="block text-sm text-text">{selectedLog.wakeups ?? 0}</strong>Despertares</span>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs text-text-muted">
+                  <span className="rounded-full bg-bg px-2.5 py-1 border border-border">Cansancio al despertar: {selectedLog.tiredness_on_wake ?? '--'}/10</span>
+                  <span className="rounded-full bg-bg px-2.5 py-1 border border-border">Cansancio día: {selectedLog.tiredness_during_day ?? '--'}/10</span>
+                </div>
+                {selectedLog.note && <p className="rounded-xl border border-border bg-bg p-3 text-sm text-text-muted">{selectedLog.note}</p>}
+              </div>
+            ) : (
+              <SleepLogForm key={selectedLog?.id ?? selectedDate} date={selectedDate} initialLog={selectedLog} saving={saving} onSubmit={handleSave} />
+            )}
           </section>
 
           <section aria-labelledby="sleep-history-title" className="space-y-4">

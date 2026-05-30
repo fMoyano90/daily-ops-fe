@@ -386,7 +386,7 @@ export default function BacklogPage() {
                             <>
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 <h3
-                                  className="text-sm font-semibold text-text truncate cursor-pointer hover:text-accent transition-colors"
+                                  className="text-sm font-semibold text-text line-clamp-3 cursor-pointer hover:text-accent transition-colors"
                                   onClick={() => { setEditingTitle(task.id); setTitleValue(task.title) }}
                                   title="Click para editar"
                                 >
