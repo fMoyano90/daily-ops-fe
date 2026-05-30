@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'motion/react'
 import { ArrowLeft, CheckCircle2, Edit2, Flame, Shield, TrendingDown, Wind, X } from 'lucide-react'
-import { Header } from '@/components/layout/Header'
 import { SkeletonCard, SkeletonStats } from '@/components/shared/Skeleton'
 import { Modal } from '@/components/shared/Modal'
 import { HabitForm } from '@/components/habits/HabitForm'
@@ -115,7 +114,7 @@ export default function HabitDetailPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Custom header with back + edit buttons */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+      <div className="flex items-center gap-3 border-b border-border px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]">
         <button onClick={() => router.back()} className="p-1 text-text-muted hover:text-text transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
