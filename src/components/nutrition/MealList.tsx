@@ -27,8 +27,8 @@ export function MealList({ meals, onDelete }: { meals: MealEntry[]; onDelete: (m
           </div>
           {meal.calories != null && (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-3 text-xs text-text-muted">
-              <Macro label="Prote" value={meal.protein_g} />
-              <Macro label="Carbs" value={meal.carbs_g} />
+              <Macro label="Proteínas" value={meal.protein_g} />
+              <Macro label="Carbos" value={meal.carbs_g} />
               <Macro label="Azúcar" value={meal.sugar_g} />
               <Macro label="Grasa" value={meal.fat_g} />
               <Macro label="Fibra" value={meal.fiber_g} />

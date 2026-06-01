@@ -98,7 +98,7 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                   className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
                 >
                   <Target className="w-5 h-5 text-text-muted" />
-                  Goals
+                  Metas
                 </Link>
               </li>
               <li>
@@ -118,7 +118,7 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                   className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
                 >
                   <SmilePlus className="w-5 h-5 text-text-muted" />
-                  Emotions
+                  Emociones
                 </Link>
               </li>
               <li>
@@ -128,7 +128,7 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                   className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
                 >
                   <Moon className="w-5 h-5 text-text-muted" />
-                  Sleep
+                  Sueño
                 </Link>
               </li>
               <li>
@@ -138,7 +138,7 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                   className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
                 >
                   <UtensilsCrossed className="w-5 h-5 text-text-muted" />
-                  Nutrition
+                  Nutrición
                 </Link>
               </li>
               <li>
@@ -168,7 +168,7 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                   className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
                 >
                   <Clock className="w-5 h-5 text-text-muted" />
-                  History
+                  Historial
                 </Link>
               </li>
               <li>
@@ -178,7 +178,7 @@ export function MobileMoreSheet({ open, onClose }: MobileMoreSheetProps) {
                   className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text hover:bg-bg-muted touch-target justify-start"
                 >
                   <Settings className="w-5 h-5 text-text-muted" />
-                  Settings
+                  Configuración
                 </Link>
               </li>
               <li>

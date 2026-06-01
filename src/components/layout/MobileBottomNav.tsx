@@ -16,10 +16,10 @@ type NavItem = {
 }
 
 const items: NavItem[] = [
-  { href: '/today', label: 'Today', icon: Sun },
+  { href: '/today', label: 'Hoy', icon: Sun },
   { href: '/backlog', label: 'Backlog', icon: ListTodo },
-  { href: '/add-task', label: 'Add', icon: Plus, fab: true },
-  { href: '/recurring', label: 'Recurring', icon: Repeat2 },
+  { href: '/add-task', label: 'Agregar', icon: Plus, fab: true },
+  { href: '/recurring', label: 'Recurrentes', icon: Repeat2 },
 ]
 
 export function MobileBottomNav() {
@@ -87,7 +87,7 @@ export function MobileBottomNav() {
                 aria-label="Más opciones"
               >
                 <MoreHorizontal className="w-5 h-5" />
-                <span>More</span>
+                <span>Más</span>
               </button>
             </li>
           </ul>

@@ -293,7 +293,7 @@ export function GoalDetail({ goalId }: GoalDetailProps) {
 
             {goal.key_results && (
               <div className="p-3 bg-bg-muted rounded-lg">
-                <p className="text-xs font-medium text-text-muted mb-1">Key Results</p>
+                <p className="text-xs font-medium text-text-muted mb-1">Resultados clave</p>
                 <p className="text-sm text-text whitespace-pre-wrap">{goal.key_results}</p>
               </div>
             )}

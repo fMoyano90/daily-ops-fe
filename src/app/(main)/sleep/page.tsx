@@ -167,7 +167,7 @@ export default function SleepPage() {
   if (loading) {
     return (
       <div>
-        <Header title="Sleep" subtitle="Cargando registro del sueño..." />
+        <Header title="Sueño" subtitle="Cargando registro del sueño..." />
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
           <SkeletonStats />
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,430px)_1fr] gap-5">
@@ -182,7 +182,7 @@ export default function SleepPage() {
   return (
     <div>
       <PullToRefreshIndicator pull={ptr.pull} refreshing={ptr.refreshing} progress={ptr.progress} />
-      <Header title="Sleep" subtitle="Registra sueño, energía y cansancio diario" />
+      <Header title="Sueño" subtitle="Registra sueño, energía y cansancio diario" />
 
       <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

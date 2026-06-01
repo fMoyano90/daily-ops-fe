@@ -24,19 +24,19 @@ import {
 } from 'lucide-react'
 
 const navItems = [
-  { href: '/today', label: 'Today', icon: Sun },
+  { href: '/today', label: 'Hoy', icon: Sun },
   { href: '/backlog', label: 'Backlog', icon: ListTodo },
-  { href: '/add-task', label: 'Add Task', icon: PlusCircle },
-  { href: '/recurring', label: 'Recurring', icon: Repeat2 },
-  { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/add-task', label: 'Agregar tarea', icon: PlusCircle },
+  { href: '/recurring', label: 'Recurrentes', icon: Repeat2 },
+  { href: '/goals', label: 'Metas', icon: Target },
   { href: '/habits', label: 'Hábitos', icon: Sprout },
-  { href: '/emotions', label: 'Emotions', icon: SmilePlus },
-  { href: '/sleep', label: 'Sleep', icon: Moon },
-  { href: '/nutrition', label: 'Nutrition', icon: UtensilsCrossed },
+  { href: '/emotions', label: 'Emociones', icon: SmilePlus },
+  { href: '/sleep', label: 'Sueño', icon: Moon },
+  { href: '/nutrition', label: 'Nutrición', icon: UtensilsCrossed },
   { href: '/health', label: 'Salud', icon: HeartPulse },
   { href: '/finances', label: 'Finanzas', icon: Wallet },
-  { href: '/history', label: 'History', icon: Clock },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/history', label: 'Historial', icon: Clock },
+  { href: '/settings', label: 'Configuración', icon: Settings },
 ]
 
 interface SidebarProps {

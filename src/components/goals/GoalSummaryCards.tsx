@@ -52,7 +52,7 @@ export function GoalSummaryCards({ summary }: GoalSummaryCardsProps) {
           <div className="mt-3 pt-3 border-t border-border">
             <p className="text-xs text-text-muted flex items-center gap-1">
               <CalendarDays className="w-3 h-3" />
-              Próximo deadline
+              Próxima fecha límite
             </p>
             <p className="text-xs font-medium text-text mt-0.5 truncate">
               {data.nearest_goal_title}

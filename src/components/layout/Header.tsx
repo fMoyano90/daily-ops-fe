@@ -59,7 +59,7 @@ export function Header({ title, subtitle }: HeaderProps) {
     <header className="sticky top-0 z-40 bg-bg/80 backdrop-blur-md border-b border-border pt-8 pb-4 md:pt-10 md:pb-6 safe-pt safe-pl safe-pr">
       {/* Title flush-left in main, just past the sidebar's edge */}
       <div className="pl-4 md:pl-8 pr-24 md:pr-[300px] pt-3">
-        <h2 className="text-lg md:text-2xl font-bold text-text truncate">{title || 'Today'}</h2>
+        <h2 className="text-lg md:text-2xl font-bold text-text truncate">{title || 'Hoy'}</h2>
         {subtitle && (
           <p className="hidden md:block text-sm text-text-muted mt-0.5">{subtitle}</p>
         )}

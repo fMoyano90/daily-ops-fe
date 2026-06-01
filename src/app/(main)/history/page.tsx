@@ -63,7 +63,7 @@ export default function HistoryPage() {
   if (loading) {
     return (
       <div>
-        <Header title="History" subtitle="Cargando historial..." />
+        <Header title="Historial" subtitle="Cargando historial..." />
         <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
           <SkeletonStats />
           <div className="space-y-3">
@@ -76,7 +76,7 @@ export default function HistoryPage() {
 
   return (
     <div>
-      <Header title="History" subtitle="Revisa tu progreso y tiempo trabajado" />
+      <Header title="Historial" subtitle="Revisa tu progreso y tiempo trabajado" />
 
       <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
         <motion.div

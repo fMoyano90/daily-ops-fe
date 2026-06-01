@@ -87,7 +87,7 @@ export default function AddTaskPage() {
 
   return (
     <div>
-      <Header title="Add Task" subtitle="Crear nueva tarea manual" />
+      <Header title="Agregar tarea" subtitle="Crear nueva tarea manual" />
 
       <div className="p-4 md:p-8 max-w-2xl mx-auto">
         <AnimatePresence>

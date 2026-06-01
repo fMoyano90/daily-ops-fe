@@ -48,7 +48,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <Header title="Settings" subtitle="Configuración de proyectos e integraciones" />
+      <Header title="Configuración" subtitle="Configuración de proyectos e integraciones" />
 
       <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-8">
         <section>

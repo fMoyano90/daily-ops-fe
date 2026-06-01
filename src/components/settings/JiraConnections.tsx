@@ -225,7 +225,7 @@ export function JiraConnections() {
             className="flex items-center gap-2 px-3 py-2 border border-border text-sm font-medium rounded-lg text-text-muted hover:bg-bg-muted transition-colors disabled:opacity-50"
           >
             {syncingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            Sync all
+            Sincronizar todo
           </button>
           <button
             onClick={openCreate}
@@ -292,7 +292,7 @@ export function JiraConnections() {
                     JQL: {conn.jql}
                   </p>
                   <p className="text-xs text-text-subtle mt-1">
-                    Último sync: {fmtDate(conn.last_sync_at)}
+                    Última sincronización: {fmtDate(conn.last_sync_at)}
                     {conn.last_sync_error && (
                       <span className="text-[var(--danger)] ml-2" title={conn.last_sync_error}>
                         · {conn.last_sync_error.slice(0, 80)}
@@ -319,7 +319,7 @@ export function JiraConnections() {
                       onClick={() => handleSync(conn)}
                       disabled={busyId === conn.id}
                       className="p-2 text-accent hover:bg-accent-soft rounded-lg transition-colors disabled:opacity-50"
-                      title="Sync now"
+                      title="Sincronizar ahora"
                     >
                       {busyId === conn.id && busyAction === 'sync' ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -351,7 +351,7 @@ export function JiraConnections() {
                     onClick={() => toggleEnabled(conn)}
                     className="text-xs text-text-subtle hover:text-text-muted underline-offset-2 hover:underline"
                   >
-                    {conn.enabled ? 'Pausar sync auto' : 'Reanudar sync auto'}
+                    {conn.enabled ? 'Pausar sync automático' : 'Reanudar sync automático'}
                   </button>
                 </div>
               </div>
@@ -379,7 +379,7 @@ export function JiraConnections() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-text-subtle mb-1">Base URL</label>
+            <label className="block text-xs font-medium text-text-subtle mb-1">URL base</label>
             <input
               type="url"
               required
@@ -410,7 +410,7 @@ export function JiraConnections() {
 
           <div>
             <label className="block text-xs font-medium text-text-subtle mb-1">
-              API Token {form.id && <span className="text-text-subtle">(dejar vacío para no cambiar)</span>}
+              Token API {form.id && <span className="text-text-subtle">(dejar vacío para no cambiar)</span>}
             </label>
             <input
               type="password"

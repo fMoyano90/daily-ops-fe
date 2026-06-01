@@ -1,15 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion } from 'motion/react'
 import { Header } from '@/components/layout/Header'
 import { ProjectBadge } from '@/components/tasks/ProjectBadge'
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
-import { RecurringTask, RecurringInstance, Project } from '@/lib/types'
+import { RecurringTask, RecurringInstance, Project, Priority } from '@/lib/types'
 import { formatDuration, normalizeExternalUrl } from '@/lib/utils'
-import { Plus, Repeat2, Trash2, Pencil, History, CheckCircle2, XCircle, Clock, ExternalLink, Tag, Bell } from 'lucide-react'
+import { Plus, Repeat2, Trash2, Pencil, History, CheckCircle2, XCircle, Clock, ExternalLink, Tag, Bell, ListFilter } from 'lucide-react'
 import { RecurringTaskForm } from '@/components/recurring/RecurringTaskForm'
 
 const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
@@ -52,6 +53,8 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 }
 
+const priorityOrder: Record<Priority, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+
 export default function RecurringPage() {
   const [tasks, setTasks] = useState<RecurringTask[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -60,8 +63,12 @@ export default function RecurringPage() {
   const [editingTask, setEditingTask] = useState<RecurringTask | null>(null)
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null)
   const [historyData, setHistoryData] = useState<Record<string, RecurringInstance[]>>({})
+  const [filterProject, setFilterProject] = useState<string>('all')
+  const [filterPriority, setFilterPriority] = useState<string>('all')
+  const [filterRecurrence, setFilterRecurrence] = useState<string>('all')
+  const [filterType, setFilterType] = useState<string>('all')
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [recurring, projectsList] = await Promise.all([
         api.recurringTasks.list(true),
@@ -74,11 +81,37 @@ export default function RecurringPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
-    loadData()
-  }, [])
+    const timer = window.setTimeout(() => {
+      void loadData()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [loadData])
+
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      if (filterProject !== 'all' && task.project_id !== filterProject) return false
+      if (filterPriority !== 'all' && task.priority !== filterPriority) return false
+      if (filterRecurrence !== 'all' && task.recurrence_type !== filterRecurrence) return false
+      if (filterType !== 'all') {
+        const project = projects.find((p) => p.id === task.project_id)
+        if (project?.type !== filterType) return false
+      }
+      return true
+    })
+  }, [tasks, filterProject, filterPriority, filterRecurrence, filterType, projects])
+
+  const sortedTasks = useMemo(() => {
+    return [...filteredTasks].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+  }, [filteredTasks])
+
+  const projectCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    tasks.forEach((t) => { counts[t.project_id] = (counts[t.project_id] || 0) + 1 })
+    return counts
+  }, [tasks])
 
   const handleToggle = async (task: RecurringTask) => {
     try {
@@ -124,7 +157,7 @@ export default function RecurringPage() {
   if (loading) {
     return (
       <div>
-        <Header title="Recurring" subtitle="Cargando tareas recurrentes..." />
+        <Header title="Recurrentes" subtitle="Cargando tareas recurrentes..." />
         <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
           <div className="flex justify-between">
             <Skeleton className="h-6 w-40" />
@@ -138,16 +171,18 @@ export default function RecurringPage() {
     )
   }
 
+  const selectClass = 'w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text focus:outline-none focus:ring-2 focus:ring-accent'
+
   return (
     <div>
-      <Header title="Recurring" subtitle="Tareas que se repiten automáticamente" />
+      <Header title="Recurrentes" subtitle="Tareas que se repiten automáticamente" />
 
       <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Repeat2 className="w-5 h-5 text-text-subtle" />
             <span className="text-sm text-text-muted">
-              {tasks.length} tarea{tasks.length !== 1 ? 's' : ''} recurrente{tasks.length !== 1 ? 's' : ''}
+              {sortedTasks.length} de {tasks.length} tarea{tasks.length !== 1 ? 's' : ''} recurrente{tasks.length !== 1 ? 's' : ''}
             </span>
           </div>
           <button
@@ -157,6 +192,50 @@ export default function RecurringPage() {
             <Plus className="w-4 h-4" />
             Nueva tarea recurrente
           </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <ListFilter className="w-4 h-4 text-text-subtle" />
+          <span className="text-sm font-medium text-text-muted">Filtros:</span>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-text-subtle mb-1">Proyecto</label>
+            <select value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className={selectClass}>
+              <option value="all">Todos</option>
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name} ({projectCounts[p.id] || 0})</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-subtle mb-1">Prioridad</label>
+            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className={selectClass}>
+              <option value="all">Todas</option>
+              <option value="critical">Crítica</option>
+              <option value="high">Alta</option>
+              <option value="medium">Media</option>
+              <option value="low">Baja</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-subtle mb-1">Recurrencia</label>
+            <select value={filterRecurrence} onChange={(e) => setFilterRecurrence(e.target.value)} className={selectClass}>
+              <option value="all">Todas</option>
+              <option value="daily">Diaria</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text-subtle mb-1">Tipo</label>
+            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectClass}>
+              <option value="all">Todos</option>
+              <option value="work">Trabajo</option>
+              <option value="business">Negocio</option>
+              <option value="partner">Socio</option>
+              <option value="personal">Personal</option>
+            </select>
+          </div>
         </div>
 
         {tasks.length === 0 ? (
@@ -174,9 +253,15 @@ export default function RecurringPage() {
               Crear tarea recurrente
             </button>
           </div>
+        ) : sortedTasks.length === 0 ? (
+          <EmptyState
+            icon={<ListFilter className="w-8 h-8" />}
+            title="No hay tareas que coincidan"
+            description="Ajusta los filtros para ver otras tareas recurrentes"
+          />
         ) : (
           <motion.div className="space-y-3" variants={listVariants} initial="hidden" animate="show">
-            {tasks.map((task) => {
+            {sortedTasks.map((task) => {
               const project = projects.find((p) => p.id === task.project_id)
               const isExpanded = expandedHistory === task.id
               const meetingTime = formatMeetingTime(task.meeting_time)

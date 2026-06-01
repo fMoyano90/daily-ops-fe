@@ -226,7 +226,7 @@ export default function EmotionsPage() {
   if (loading) {
     return (
       <div>
-        <Header title="Emotions" subtitle="Cargando diario emocional..." />
+        <Header title="Emociones" subtitle="Cargando diario emocional..." />
         <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
           <SkeletonStats />
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,420px)_1fr] gap-4">
@@ -241,7 +241,7 @@ export default function EmotionsPage() {
   return (
     <div>
       <PullToRefreshIndicator pull={ptr.pull} refreshing={ptr.refreshing} progress={ptr.progress} />
-      <Header title="Emotions" subtitle="Registra cambios de ánimo y detecta patrones" />
+      <Header title="Emociones" subtitle="Registra cambios de ánimo y detecta patrones" />
 
       <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

@@ -217,7 +217,7 @@ export function GoalForm({ open, onClose, onSubmit, projects, initialData }: Goa
           </div>
 
           <div>
-            <label htmlFor={keyResultsId} className={labelClass}>Key Results</label>
+            <label htmlFor={keyResultsId} className={labelClass}>Resultados clave</label>
             <p id={keyResultsHintId} className="text-xs text-text-subtle mb-1.5">Métricas de éxito (cómo sabrás que lo lograste)</p>
             <textarea
               id={keyResultsId}

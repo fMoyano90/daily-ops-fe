@@ -12,7 +12,7 @@ import { SubtaskList } from '@/components/today/SubtaskList'
 import { TaskComments } from '@/components/today/TaskComments'
 import { Modal } from '@/components/shared/Modal'
 import { formatDuration, normalizeExternalUrl, projectTypeLabel } from '@/lib/utils'
-import { ChevronDown, ChevronRight, CheckCircle2, Repeat2, X, FileText, RotateCcw, AlertTriangle, ExternalLink, Tag, Plus, Bell } from 'lucide-react'
+import { ChevronDown, ChevronRight, CheckCircle2, Repeat2, X, FileText, RotateCcw, AlertTriangle, ExternalLink, Tag, Bell } from 'lucide-react'
 
 interface TaskCardProps {
   task: DailyTask
@@ -135,11 +135,11 @@ export function TaskCard({
           Reabrir
         </button>
       )}
-      {isRecurring && !isCompleted && onRemove && (
+      {!isCompleted && onRemove && (
         <button
           onClick={() => onRemove(task.id)}
           className="flex items-center justify-center gap-1.5 px-3 py-2 text-text-subtle hover:text-danger hover:bg-danger-soft text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
-          title="Quitar del plan"
+          title={isRecurring ? 'Quitar del plan' : 'Devolver al backlog'}
         >
           <X className="w-3.5 h-3.5" />
           Quitar
@@ -272,16 +272,6 @@ export function TaskCard({
                   )}
                 </div>
 
-                {isRecurring && !expanded && !isCompleted && (
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(true)}
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-[var(--accent-hover)] hover:bg-accent-soft px-2 py-1 rounded-lg transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Añadir subtareas del día
-                  </button>
-                )}
               </div>
 
               {task.project && (

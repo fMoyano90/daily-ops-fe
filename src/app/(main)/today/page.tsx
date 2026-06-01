@@ -529,7 +529,7 @@ export default function TodayPage() {
   if (loading) {
     return (
       <div>
-        <Header title="Today" subtitle="Cargando tu plan diario..." />
+        <Header title="Hoy" subtitle="Cargando tu plan diario..." />
         <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
           <SkeletonStats />
           <div className="space-y-3">
@@ -543,7 +543,7 @@ export default function TodayPage() {
   return (
     <div>
       <PullToRefreshIndicator pull={ptr.pull} refreshing={ptr.refreshing} progress={ptr.progress} />
-      <Header title="Today" subtitle="Planifica y ejecuta tu día" />
+      <Header title="Hoy" subtitle="Planifica y ejecuta tu día" />
 
       <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
         {tasks.length === 0 && suggested.length === 0 ? (

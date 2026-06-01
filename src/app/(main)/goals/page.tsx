@@ -98,7 +98,7 @@ export default function GoalsPage() {
   return (
     <div>
       <PullToRefreshIndicator pull={ptr.pull} refreshing={ptr.refreshing} progress={ptr.progress} />
-      <Header title="Goals" subtitle="Tus metas y objetivos" />
+      <Header title="Metas" subtitle="Tus metas y objetivos" />
 
       <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
         <GoalSummaryCards summary={summary} />
