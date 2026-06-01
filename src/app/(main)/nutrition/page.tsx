@@ -7,8 +7,6 @@ import { Header } from '@/components/layout/Header'
 import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
 import { SkeletonCard, SkeletonStats } from '@/components/shared/Skeleton'
 import { DaySummary } from '@/components/nutrition/DaySummary'
-import { ExerciseEntryForm } from '@/components/nutrition/ExerciseEntryForm'
-import { ExerciseList } from '@/components/nutrition/ExerciseList'
 import { HealthProfileForm } from '@/components/nutrition/HealthProfileForm'
 import { MealEntryForm } from '@/components/nutrition/MealEntryForm'
 import { MealList } from '@/components/nutrition/MealList'
@@ -16,7 +14,7 @@ import { WaterTracker } from '@/components/nutrition/WaterTracker'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { ExerciseEntry, HealthProfile, HealthProfileInput, MealEntry, NutritionDay, NutritionDaySummary } from '@/lib/types'
+import { HealthProfile, HealthProfileInput, MealEntry, NutritionDay, NutritionDaySummary } from '@/lib/types'
 
 const defaultSummary: NutritionDaySummary = {
   period_start: '',
@@ -93,7 +91,6 @@ export default function NutritionPage() {
   const [loading, setLoading] = useState(true)
   const [savingProfile, setSavingProfile] = useState(false)
   const [savingMeal, setSavingMeal] = useState(false)
-  const [savingExercise, setSavingExercise] = useState(false)
   const [updatingWater, setUpdatingWater] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [editingProfile, setEditingProfile] = useState(false)
@@ -175,21 +172,6 @@ export default function NutritionPage() {
     }
   }
 
-  const addExercise = async (description: string) => {
-    setSavingExercise(true)
-    setError(null)
-    try {
-      await api.nutrition.createExercise({ date: selectedDate, description })
-      setStatusMessage('Ejercicio añadido')
-      await loadData()
-    } catch (err) {
-      console.error('Failed to add exercise:', err)
-      setError(err instanceof Error ? err.message : 'No se pudo añadir el ejercicio')
-    } finally {
-      setSavingExercise(false)
-    }
-  }
-
   const deleteMeal = async (meal: MealEntry) => {
     if (!window.confirm('¿Eliminar esta comida?')) return
     try {
@@ -198,17 +180,6 @@ export default function NutritionPage() {
       await loadData()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo eliminar la comida')
-    }
-  }
-
-  const deleteExercise = async (exercise: ExerciseEntry) => {
-    if (!window.confirm('¿Eliminar este ejercicio?')) return
-    try {
-      await api.nutrition.deleteExercise(exercise.id)
-      setStatusMessage('Ejercicio eliminado')
-      await loadData()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo eliminar el ejercicio')
     }
   }
 
@@ -246,12 +217,12 @@ export default function NutritionPage() {
     return (
       <div>
         <Header title="Nutrición" subtitle="Cargando alimentación diaria..." />
-        <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+        <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
           <SkeletonStats />
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,430px)_1fr] gap-5">
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
+        <div className="grid grid-cols-1 gap-5">
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
         </div>
       </div>
     )
@@ -261,7 +232,7 @@ export default function NutritionPage() {
     return (
       <div>
         <Header title="Nutrición" subtitle="Registra comidas, ejercicio, agua y balance calórico" />
-        <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-4">
+        <main className="p-4 md:p-6 max-w-5xl mx-auto space-y-4">
           <div role="alert" className="p-4 rounded-xl border border-danger-soft bg-danger-soft/40 text-sm text-[var(--danger)]">
             {error ?? 'No se pudo cargar nutrition'}
           </div>
@@ -278,7 +249,7 @@ export default function NutritionPage() {
       <PullToRefreshIndicator pull={ptr.pull} refreshing={ptr.refreshing} progress={ptr.progress} />
       <Header title="Nutrición" subtitle="Registra comidas, ejercicio, agua y balance calórico" />
 
-      <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+      <main className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <InsightCard icon={<Flame className="w-4 h-4" />} label="Objetivo" value={formatKcal(day.recommended_calories ?? profile?.recommended_calories)} tone="text-accent bg-accent-soft" />
           <InsightCard icon={<UtensilsCrossed className="w-4 h-4" />} label="Consumidas" value={formatKcal(day.consumed_calories)} tone="text-[var(--warning)] bg-warning-soft" />
@@ -289,8 +260,8 @@ export default function NutritionPage() {
         {error && <div role="alert" className="p-3 rounded-xl border border-danger-soft bg-danger-soft/40 text-sm text-[var(--danger)]">{error}</div>}
         <p className="sr-only" aria-live="polite" aria-atomic="true">{statusMessage}</p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,430px)_1fr] gap-5 items-start">
-          <section aria-labelledby="nutrition-profile-title" className={cn('bg-bg-elevated border rounded-2xl p-4 md:p-5 lg:sticky lg:top-28', profile ? 'border-border' : 'border-accent/50')}>
+        <div className="space-y-6">
+          <section aria-labelledby="nutrition-profile-title" className={cn('bg-bg-elevated border rounded-2xl p-4', profile ? 'border-border' : 'border-accent/50')}>
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
                 <h2 id="nutrition-profile-title" className="text-base font-semibold text-text">Perfil</h2>
@@ -359,27 +330,16 @@ export default function NutritionPage() {
 
             <WaterTracker waterMl={day.water_ml} glassMl={glassMl} updating={updatingWater} onDelta={updateWater} />
 
-            <DaySummary day={day} analyzing={analyzing} canAnalyze={Boolean(profile && (day.meals.length > 0 || day.exercises.length > 0))} onAnalyze={analyzeDay} />
+            <DaySummary day={day} analyzing={analyzing} canAnalyze={Boolean(profile && day.meals.length > 0)} onAnalyze={analyzeDay} />
 
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-              <section aria-labelledby="meals-title" className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5 space-y-4">
-                <div>
-                  <h2 id="meals-title" className="text-base font-semibold text-text">Comidas</h2>
-                  <p className="text-sm text-text-muted mt-1">Texto libre; la IA estima kcal y macros al analizar.</p>
-                </div>
-                <MealEntryForm saving={savingMeal} onSubmit={addMeal} />
-                <MealList meals={day.meals} onDelete={deleteMeal} />
-              </section>
-
-              <section aria-labelledby="exercises-title" className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5 space-y-4">
-                <div>
-                  <h2 id="exercises-title" className="text-base font-semibold text-text">Ejercicios</h2>
-                  <p className="text-sm text-text-muted mt-1">Describe duración, repeticiones o intensidad si la sabes.</p>
-                </div>
-                <ExerciseEntryForm saving={savingExercise} onSubmit={addExercise} />
-                <ExerciseList exercises={day.exercises} onDelete={deleteExercise} />
-              </section>
-            </div>
+            <section aria-labelledby="meals-title" className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5 space-y-4">
+              <div>
+                <h2 id="meals-title" className="text-base font-semibold text-text">Comidas</h2>
+                <p className="text-sm text-text-muted mt-1">Texto libre; la IA estima kcal y macros al analizar.</p>
+              </div>
+              <MealEntryForm saving={savingMeal} onSubmit={addMeal} />
+              <MealList meals={day.meals} onDelete={deleteMeal} />
+            </section>
           </section>
         </div>
       </main>
@@ -410,7 +370,7 @@ function NutritionHistory({ days, selectedDate, onSelect }: { days: NutritionDay
               <span className="font-semibold text-text capitalize">{formatDateLabel(day.date)}</span>
               <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold', day.status === 'analyzed' ? 'bg-success-soft text-[var(--success)]' : 'bg-bg-muted text-text-muted')}>{day.status === 'analyzed' ? 'Analizado' : 'Borrador'}</span>
             </div>
-            <p className="mt-1 text-xs text-text-subtle">{day.meals.length} comidas · {day.exercises.length} ejercicios · {day.water_ml} ml agua</p>
+            <p className="mt-1 text-xs text-text-subtle">{day.meals.length} comidas · {day.water_ml} ml agua{day.burned_calories ? ` · ${day.burned_calories} kcal quemadas` : ''}</p>
           </button>
         </motion.li>
       ))}

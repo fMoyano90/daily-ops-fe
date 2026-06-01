@@ -2,18 +2,20 @@
 
 import { FormEvent, useState } from 'react'
 import { cn } from '@/lib/utils'
-import { HabitEventCreate } from '@/lib/types'
+import { HabitEventCreate, HabitTrackingMode } from '@/lib/types'
 
 const emotionOptions = ['ansiedad', 'rabia', 'tristeza', 'soledad', 'aburrimiento', 'estrés', 'frustración', 'vacío', 'alegría', 'celebración']
 const triggerOptions = ['trabajo', 'pareja', 'familia', 'soledad', 'alcohol-cerca', 'conversación', 'recuerdo', 'cansancio', 'celebración', 'fiesta']
 
 interface Props {
   habitName: string
+  trackingMode: HabitTrackingMode
   onSave: (data: HabitEventCreate) => Promise<void>
   onCancel: () => void
 }
 
-export function RelapseForm({ habitName, onSave, onCancel }: Props) {
+export function RelapseForm({ habitName, trackingMode, onSave, onCancel }: Props) {
+  const isPositive = trackingMode === 'positive'
   const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({
     emotion: '',
@@ -50,17 +52,17 @@ export function RelapseForm({ habitName, onSave, onCancel }: Props) {
   return (
     <form onSubmit={handleSubmit} className="bg-bg rounded-2xl border border-border p-5 space-y-5">
       <div>
-        <p className="text-xs text-text-muted uppercase tracking-wide font-medium">Registro honesto</p>
-        <h3 className="text-lg font-semibold text-text mt-0.5">{habitName}</h3>
+        <p className="text-xs text-text-muted uppercase tracking-wide font-medium">{isPositive ? 'Registro de pendiente' : 'Registro honesto'}</p>
+        <h3 className="text-lg font-semibold text-text mt-0.5">{isPositive ? 'No ocurrió' : habitName}</h3>
         <p className="text-sm text-text-muted mt-1">
-          Esto es para entender, no para juzgar. Cada registro es información valiosa.
+          {isPositive ? `Registra qué impidió ${habitName.toLowerCase()} para ajustar mañana.` : 'Esto es para entender, no para juzgar. Cada registro es información valiosa.'}
         </p>
       </div>
 
       {/* Intensity */}
       <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">
-          ¿Cuánta intensidad tenía el deseo antes? <span className="text-accent font-semibold">{form.intensity}/10</span>
+          {isPositive ? '¿Qué tan difícil fue hacerlo?' : '¿Cuánta intensidad tenía el deseo antes?'} <span className="text-accent font-semibold">{form.intensity}/10</span>
         </label>
         <input
           type="range" min={1} max={10} value={form.intensity}
@@ -85,7 +87,7 @@ export function RelapseForm({ habitName, onSave, onCancel }: Props) {
 
       {/* Trigger */}
       <div>
-        <label className="text-sm font-medium text-text-muted block mb-1.5">¿Qué lo gatilló?</label>
+        <label className="text-sm font-medium text-text-muted block mb-1.5">{isPositive ? '¿Qué lo impidió?' : '¿Qué lo gatilló?'}</label>
         <div className="flex flex-wrap gap-2">
           {triggerOptions.map((t) => (
             <button type="button" key={t} onClick={() => setForm((p) => ({ ...p, trigger: p.trigger === t ? '' : t }))}
@@ -99,17 +101,17 @@ export function RelapseForm({ habitName, onSave, onCancel }: Props) {
 
       {/* Feeling note */}
       <div>
-        <label className="text-sm font-medium text-text-muted block mb-1.5">¿Qué pasó por tu cabeza?</label>
+        <label className="text-sm font-medium text-text-muted block mb-1.5">{isPositive ? '¿Qué pasó?' : '¿Qué pasó por tu cabeza?'}</label>
         <textarea
           rows={2} value={form.feeling_note} onChange={(e) => setForm((p) => ({ ...p, feeling_note: e.target.value }))}
-          placeholder="El contexto, la situación, lo que sea que recuerdes..."
+          placeholder={isPositive ? 'El contexto, la situación, lo que lo hizo difícil...' : 'El contexto, la situación, lo que sea que recuerdes...'}
           className="w-full rounded-lg border border-border bg-bg-subtle px-3 py-2 text-sm text-text placeholder-text-muted resize-none focus:outline-none focus:border-accent"
         />
       </div>
 
       {/* What would you do differently */}
       <div>
-        <label className="text-sm font-medium text-text-muted block mb-1.5">¿Qué podrías hacer diferente la próxima vez?</label>
+        <label className="text-sm font-medium text-text-muted block mb-1.5">{isPositive ? '¿Qué facilitaría hacerlo mañana?' : '¿Qué podrías hacer diferente la próxima vez?'}</label>
         <textarea
           rows={2} value={form.action_taken} onChange={(e) => setForm((p) => ({ ...p, action_taken: e.target.value }))}
           placeholder="Cualquier idea, grande o pequeña..."

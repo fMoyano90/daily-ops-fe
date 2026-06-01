@@ -10,7 +10,7 @@ import { HabitForm } from '@/components/habits/HabitForm'
 import { UrgePanel } from '@/components/habits/UrgePanel'
 import { RelapseForm } from '@/components/habits/RelapseForm'
 import { api } from '@/lib/api'
-import { Habit, HabitEvent, HabitEventCreate, HabitSummary, HabitUpdate } from '@/lib/types'
+import { Habit, HabitEvent, HabitEventCreate, HabitSummary, HabitTrackingMode, HabitUpdate } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type ActivePanel = null | 'urge' | 'relapse' | 'edit'
@@ -23,15 +23,29 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
 }
 
-const eventTypeLabel: Record<string, string> = {
-  check_in: '✓ Check-in',
-  urge: '⚡ Deseo',
-  relapse: '↩ Registro',
-}
 const eventTypeColor: Record<string, string> = {
   check_in: 'text-[var(--success)]',
   urge: 'text-[var(--warning)]',
   relapse: 'text-text-muted',
+}
+
+const modeCopy: Record<HabitTrackingMode, { subtitle: string; checkIn: string; urge: string; lapse: string }> = {
+  positive: { subtitle: 'Hábito positivo', checkIn: 'Ayer cumplí', urge: 'Tengo ganas', lapse: 'No ocurrió' },
+  abstinence: { subtitle: 'Abstinencia', checkIn: 'Ayer OK', urge: 'Tengo deseo', lapse: 'Ocurrió' },
+  control: { subtitle: 'Control de conducta', checkIn: 'Ayer OK', urge: 'Tengo deseo', lapse: 'Ocurrió' },
+}
+
+function eventTypeLabel(eventType: string, trackingMode: HabitTrackingMode) {
+  if (eventType === 'check_in') return trackingMode === 'positive' ? '✓ Cumplido' : '✓ Check-in'
+  if (eventType === 'urge') return trackingMode === 'positive' ? '⚡ Ganas' : '⚡ Deseo'
+  return trackingMode === 'positive' ? '↩ No ocurrió' : '↩ Registro'
+}
+
+function yesterdayNoonIso() {
+  const date = new Date()
+  date.setDate(date.getDate() - 1)
+  date.setHours(12, 0, 0, 0)
+  return date.toISOString()
 }
 
 export default function HabitDetailPage() {
@@ -64,15 +78,20 @@ export default function HabitDetailPage() {
     }
   }, [id])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timeout = window.setTimeout(() => { void load() }, 0)
+    return () => window.clearTimeout(timeout)
+  }, [load])
 
   async function handleSaveEvent(data: HabitEventCreate) {
     await api.habits.events.create(id, data)
     setActivePanel(null)
     const typeMsg = data.event_type === 'urge'
-      ? (data.resisted ? 'Resististe el deseo. Registrado.' : 'Registrado honestamente.')
+      ? habit?.tracking_mode === 'positive'
+        ? (data.resisted ? 'Acción hecha. Registrado.' : 'Ganas registradas.')
+        : (data.resisted ? 'Resististe el deseo. Registrado.' : 'Registrado honestamente.')
       : data.event_type === 'relapse'
-      ? 'Registro guardado. Gracias por tu honestidad.'
+      ? habit?.tracking_mode === 'positive' ? 'Registro guardado. Mañana se ajusta.' : 'Registro guardado. Gracias por tu honestidad.'
       : 'Check-in guardado.'
     setStatusMessage(typeMsg)
     setTimeout(() => setStatusMessage(''), 3000)
@@ -82,8 +101,8 @@ export default function HabitDetailPage() {
   async function handleCheckIn() {
     setCheckingIn(true)
     try {
-      await api.habits.events.create(id, { event_type: 'check_in' })
-      setStatusMessage('¡Sigue así!')
+      await api.habits.events.create(id, { event_type: 'check_in', occurred_at: yesterdayNoonIso() })
+      setStatusMessage('Ayer guardado. ¡Sigue así!')
       setTimeout(() => setStatusMessage(''), 3000)
       await load()
     } finally {
@@ -109,7 +128,9 @@ export default function HabitDetailPage() {
   )
 
   const metrics = summary?.metrics
-  const isAbstinence = habit.tracking_mode === 'abstinence'
+  const isPositive = habit.tracking_mode === 'positive'
+  const isControl = habit.tracking_mode === 'control'
+  const copy = modeCopy[habit.tracking_mode]
 
   return (
     <div className="flex flex-col h-full">
@@ -120,7 +141,7 @@ export default function HabitDetailPage() {
         </button>
         <div className="flex-1 min-w-0">
           <h1 className="font-semibold text-text truncate">{habit.name}</h1>
-          <p className="text-xs text-text-muted">{isAbstinence ? 'Abstinencia' : 'Control de conducta'}</p>
+          <p className="text-xs text-text-muted">{copy.subtitle}</p>
         </div>
         <button onClick={() => setActivePanel('edit')} className="p-1 text-text-muted hover:text-text transition-colors">
           <Edit2 className="w-4 h-4" />
@@ -152,19 +173,19 @@ export default function HabitDetailPage() {
           {/* Metrics */}
           {metrics && (
             <div className="grid grid-cols-3 gap-3">
-              <div className={cn('rounded-xl p-3 text-center', isAbstinence ? 'bg-success-soft' : 'bg-info-soft')}>
-                {isAbstinence ? <Flame className="w-4 h-4 mx-auto mb-1 text-[var(--success)]" /> : <TrendingDown className="w-4 h-4 mx-auto mb-1 text-[var(--info)]" />}
-                <p className={cn('text-2xl font-bold leading-none', isAbstinence ? 'text-[var(--success)]' : 'text-[var(--info)]')}>
-                  {isAbstinence ? metrics.current_streak_days : metrics.total_relapses}
+              <div className={cn('rounded-xl p-3 text-center', isControl ? 'bg-info-soft' : 'bg-success-soft')}>
+                {isControl ? <TrendingDown className="w-4 h-4 mx-auto mb-1 text-[var(--info)]" /> : <Flame className="w-4 h-4 mx-auto mb-1 text-[var(--success)]" />}
+                <p className={cn('text-2xl font-bold leading-none', isControl ? 'text-[var(--info)]' : 'text-[var(--success)]')}>
+                  {isControl ? metrics.total_relapses : metrics.current_streak_days}
                 </p>
-                <p className={cn('text-[10px] mt-0.5', isAbstinence ? 'text-[var(--success)]' : 'text-[var(--info)]')}>
-                  {isAbstinence ? 'días' : 'episodios'}
+                <p className={cn('text-[10px] mt-0.5', isControl ? 'text-[var(--info)]' : 'text-[var(--success)]')}>
+                  {isControl ? 'episodios' : 'días'}
                 </p>
               </div>
               <div className="bg-warning-soft rounded-xl p-3 text-center">
                 <Shield className="w-4 h-4 mx-auto mb-1 text-[var(--warning)]" />
-                <p className="text-2xl font-bold leading-none text-[var(--warning)]">{metrics.urges_resisted}</p>
-                <p className="text-[10px] mt-0.5 text-[var(--warning)]">resistidos</p>
+                <p className="text-2xl font-bold leading-none text-[var(--warning)]">{isPositive ? metrics.total_urges : metrics.urges_resisted}</p>
+                <p className="text-[10px] mt-0.5 text-[var(--warning)]">{isPositive ? 'ganas' : 'resistidos'}</p>
               </div>
               <div className="bg-bg-subtle rounded-xl p-3 text-center">
                 <Flame className="w-4 h-4 mx-auto mb-1 text-text-muted" />
@@ -179,17 +200,17 @@ export default function HabitDetailPage() {
             <button onClick={handleCheckIn} disabled={checkingIn}
               className="flex flex-col items-center gap-1 py-3 rounded-xl border border-border hover:border-[var(--success)] hover:bg-success-soft transition-colors text-text-muted hover:text-[var(--success)] disabled:opacity-50">
               <CheckCircle2 className="w-5 h-5" />
-              <span className="text-xs font-medium">Hoy ok</span>
+              <span className="text-xs font-medium">{copy.checkIn}</span>
             </button>
             <button onClick={() => setActivePanel('urge')}
               className="flex flex-col items-center gap-1 py-3 rounded-xl border border-border hover:border-[var(--warning)] hover:bg-warning-soft transition-colors text-text-muted hover:text-[var(--warning)]">
               <Wind className="w-5 h-5" />
-              <span className="text-xs font-medium">Tengo deseo</span>
+              <span className="text-xs font-medium">{copy.urge}</span>
             </button>
             <button onClick={() => setActivePanel('relapse')}
               className="flex flex-col items-center gap-1 py-3 rounded-xl border border-border hover:border-accent/50 hover:bg-accent/5 transition-colors text-text-muted hover:text-accent">
               <X className="w-5 h-5" />
-              <span className="text-xs font-medium">Ocurrió</span>
+              <span className="text-xs font-medium">{copy.lapse}</span>
             </button>
           </div>
 
@@ -197,12 +218,12 @@ export default function HabitDetailPage() {
           <AnimatePresence>
             {activePanel === 'urge' && (
               <motion.div key="urge" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <UrgePanel habitName={habit.name} onSave={handleSaveEvent} onCancel={() => setActivePanel(null)} />
+                <UrgePanel habitName={habit.name} trackingMode={habit.tracking_mode} onSave={handleSaveEvent} onCancel={() => setActivePanel(null)} />
               </motion.div>
             )}
             {activePanel === 'relapse' && (
               <motion.div key="relapse" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-                <RelapseForm habitName={habit.name} onSave={handleSaveEvent} onCancel={() => setActivePanel(null)} />
+                <RelapseForm habitName={habit.name} trackingMode={habit.tracking_mode} onSave={handleSaveEvent} onCancel={() => setActivePanel(null)} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -251,7 +272,7 @@ export default function HabitDetailPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={cn('text-xs font-medium', eventTypeColor[ev.event_type])}>
-                          {eventTypeLabel[ev.event_type]}
+                          {eventTypeLabel(ev.event_type, habit.tracking_mode)}
                         </span>
                         {ev.emotion && <span className="text-xs text-text-muted">{ev.emotion}</span>}
                         {ev.trigger && <span className="text-xs text-text-muted">· {ev.trigger}</span>}

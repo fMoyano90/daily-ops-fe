@@ -21,6 +21,7 @@ import {
   HeartPulse,
   Sprout,
   Wallet,
+  Dumbbell,
 } from 'lucide-react'
 
 const navItems = [
@@ -33,6 +34,7 @@ const navItems = [
   { href: '/emotions', label: 'Emociones', icon: SmilePlus },
   { href: '/sleep', label: 'Sueño', icon: Moon },
   { href: '/nutrition', label: 'Nutrición', icon: UtensilsCrossed },
+  { href: '/exercise', label: 'Ejercicio', icon: Dumbbell },
   { href: '/health', label: 'Salud', icon: HeartPulse },
   { href: '/finances', label: 'Finanzas', icon: Wallet },
   { href: '/history', label: 'Historial', icon: Clock },

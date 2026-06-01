@@ -25,7 +25,7 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
   const [form, setForm] = useState({
     name: initial?.name ?? '',
     category: initial?.category ?? ('other' as HabitCategory),
-    tracking_mode: initial?.tracking_mode ?? ('abstinence' as HabitTrackingMode),
+    tracking_mode: initial?.tracking_mode ?? ('positive' as HabitTrackingMode),
     motivation: initial?.motivation ?? '',
     triggers: initial?.triggers ?? ([] as string[]),
     coping_strategies: initial?.coping_strategies ?? ([] as string[]),
@@ -66,10 +66,10 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
       <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 scroll-pb-6">
         {/* Name */}
         <div>
-        <label className="text-sm font-medium text-text-muted block mb-1.5">¿Qué conducta querés cambiar? *</label>
+        <label className="text-sm font-medium text-text-muted block mb-1.5">¿Qué hábito o conducta querés trabajar? *</label>
         <input
           value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-          placeholder="Ej: Dejar de fumar, controlar los celos..."
+          placeholder="Ej: Leer 20 min, dejar de fumar, controlar los celos..."
           required
           className="w-full rounded-lg border border-border bg-bg-subtle px-3 py-2 text-sm text-text placeholder-text-muted focus:outline-none focus:border-accent"
         />
@@ -92,7 +92,12 @@ export function HabitForm({ initial, onSave, onCancel }: Props) {
         {/* Tracking mode */}
         <div>
         <label className="text-sm font-medium text-text-muted block mb-1.5">¿Cómo querés medirlo?</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <button type="button" onClick={() => setForm((p) => ({ ...p, tracking_mode: 'positive' }))}
+            className={cn('text-left p-3 rounded-xl border transition-colors', form.tracking_mode === 'positive' ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/50')}>
+            <p className={cn('text-sm font-medium', form.tracking_mode === 'positive' ? 'text-accent' : 'text-text')}>Positivo</p>
+            <p className="text-xs text-text-muted mt-0.5">Construir algo que querés repetir</p>
+          </button>
           <button type="button" onClick={() => setForm((p) => ({ ...p, tracking_mode: 'abstinence' }))}
             className={cn('text-left p-3 rounded-xl border transition-colors', form.tracking_mode === 'abstinence' ? 'border-accent bg-accent/5' : 'border-border hover:border-accent/50')}>
             <p className={cn('text-sm font-medium', form.tracking_mode === 'abstinence' ? 'text-accent' : 'text-text')}>Abstinencia</p>

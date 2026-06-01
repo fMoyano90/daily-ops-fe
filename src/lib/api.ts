@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceLoan, FinanceSummary } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceLoan, FinanceSummary, ExerciseProfile, ExerciseProfileInput, WorkoutDay, WorkoutDayUpdate, WorkoutExercise, WorkoutExerciseCreate, WorkoutExerciseUpdate, WorkoutWeekSummary, DailyContextInput } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -629,5 +629,35 @@ export const api = {
     loans: (status = 'open') => fetchApi<FinanceLoan[]>(`/finances/loans?status=${status}`),
     repayLoan: (id: string, data: { date: string; amount: number; description?: string | null }) =>
       fetchApi<FinanceLoan>(`/finances/loans/${id}/repay`, { method: 'POST', body: JSON.stringify(data) }),
+  },
+
+  exercise: {
+    getProfile: () => fetchApi<ExerciseProfile | null>('/exercise/profile'),
+    saveProfile: (data: ExerciseProfileInput) =>
+      fetchApi<ExerciseProfile>('/exercise/profile', { method: 'PUT', body: JSON.stringify(data) }),
+    today: () => fetchApi<WorkoutDay>('/exercise/today'),
+    getByDate: (date: string) => fetchApi<WorkoutDay>(`/exercise/${date}`),
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<WorkoutDay[]>(`/exercise${qs}`)
+    },
+    updateDay: (date: string, data: WorkoutDayUpdate) =>
+      fetchApi<WorkoutDay>(`/exercise/${date}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteDay: (date: string) => fetchApi<void>(`/exercise/${date}`, { method: 'DELETE' }),
+    createExercise: (data: WorkoutExerciseCreate) =>
+      fetchApi<WorkoutExercise>('/exercise/exercises', { method: 'POST', body: JSON.stringify(data) }),
+    updateExercise: (id: string, data: WorkoutExerciseUpdate) =>
+      fetchApi<WorkoutExercise>(`/exercise/exercises/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deleteExercise: (id: string) => fetchApi<void>(`/exercise/exercises/${id}`, { method: 'DELETE' }),
+    suggest: (date: string, context?: DailyContextInput) =>
+      fetchApi<WorkoutDay>(`/exercise/${date}/suggest`, { method: 'POST', body: context ? JSON.stringify(context) : undefined }),
+    calculateCalories: (date: string) =>
+      fetchApi<WorkoutDay>(`/exercise/${date}/calculate-calories`, { method: 'POST' }),
+    coachMessage: (date: string) =>
+      fetchApi<WorkoutDay>(`/exercise/${date}/coach-message`, { method: 'POST' }),
+    weeklySummary: (weekStart?: string) => {
+      const qs = weekStart ? `?week_start=${weekStart}` : ''
+      return fetchApi<WorkoutWeekSummary>(`/exercise/summary/week${qs}`)
+    },
   },
 }

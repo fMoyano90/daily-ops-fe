@@ -5,20 +5,22 @@ import { motion, AnimatePresence } from 'motion/react'
 import { Wind } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BreathingExercise } from './BreathingExercise'
-import { HabitEventCreate } from '@/lib/types'
+import { HabitEventCreate, HabitTrackingMode } from '@/lib/types'
 
 const emotionOptions = ['ansiedad', 'rabia', 'tristeza', 'soledad', 'aburrimiento', 'estrés', 'frustración', 'vacío']
 const triggerOptions = ['trabajo', 'pareja', 'familia', 'soledad', 'alcohol-cerca', 'conversación', 'recuerdo', 'cansancio', 'celebración']
 
 interface Props {
   habitName: string
+  trackingMode: HabitTrackingMode
   onSave: (data: HabitEventCreate) => Promise<void>
   onCancel: () => void
 }
 
 type Step = 'feel' | 'breathe' | 'result'
 
-export function UrgePanel({ habitName, onSave, onCancel }: Props) {
+export function UrgePanel({ habitName, trackingMode, onSave, onCancel }: Props) {
+  const isPositive = trackingMode === 'positive'
   const [step, setStep] = useState<Step>('feel')
   const [breathingUsed, setBreathingUsed] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -59,9 +61,9 @@ export function UrgePanel({ habitName, onSave, onCancel }: Props) {
   return (
     <div className="bg-bg rounded-2xl border border-border p-5 space-y-5">
       <div>
-        <p className="text-xs text-text-muted uppercase tracking-wide font-medium">Modo preventivo</p>
-        <h3 className="text-lg font-semibold text-text mt-0.5">Apareció el deseo — {habitName}</h3>
-        <p className="text-sm text-text-muted mt-1">Esto es una oportunidad. Escribe cómo estás.</p>
+        <p className="text-xs text-text-muted uppercase tracking-wide font-medium">{isPositive ? 'Impulso positivo' : 'Modo preventivo'}</p>
+        <h3 className="text-lg font-semibold text-text mt-0.5">{isPositive ? 'Aparecieron las ganas' : 'Apareció el deseo'} — {habitName}</h3>
+        <p className="text-sm text-text-muted mt-1">{isPositive ? 'Anotalo para aumentar la probabilidad de hacerlo.' : 'Esto es una oportunidad. Escribe cómo estás.'}</p>
       </div>
 
       <AnimatePresence mode="wait">
@@ -69,7 +71,7 @@ export function UrgePanel({ habitName, onSave, onCancel }: Props) {
           <motion.div key="feel" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-4">
             {/* Intensity */}
             <div>
-              <label className="text-sm font-medium text-text-muted block mb-1.5">¿Qué tan intenso es el deseo? <span className="text-accent font-semibold">{form.intensity}/10</span></label>
+              <label className="text-sm font-medium text-text-muted block mb-1.5">{isPositive ? '¿Qué tan fuertes son las ganas?' : '¿Qué tan intenso es el deseo?'} <span className="text-accent font-semibold">{form.intensity}/10</span></label>
               <input
                 type="range" min={1} max={10} value={form.intensity}
                 onChange={(e) => setForm((p) => ({ ...p, intensity: Number(e.target.value) }))}
@@ -92,7 +94,7 @@ export function UrgePanel({ habitName, onSave, onCancel }: Props) {
 
             {/* Trigger */}
             <div>
-              <label className="text-sm font-medium text-text-muted block mb-1.5">¿Qué lo disparó?</label>
+              <label className="text-sm font-medium text-text-muted block mb-1.5">{isPositive ? '¿Qué lo activó?' : '¿Qué lo disparó?'}</label>
               <div className="flex flex-wrap gap-2">
                 {triggerOptions.map((t) => (
                   <button key={t} onClick={() => setForm((p) => ({ ...p, trigger: p.trigger === t ? '' : t }))}
@@ -142,11 +144,11 @@ export function UrgePanel({ habitName, onSave, onCancel }: Props) {
             <div className="flex gap-3">
               <button onClick={() => handleSubmit(true)} disabled={saving}
                 className="flex-1 py-3 rounded-xl bg-success-soft text-[var(--success)] font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50">
-                Lo resistí
+                {isPositive ? 'Lo hice' : 'Lo resistí'}
               </button>
               <button onClick={() => handleSubmit(false)} disabled={saving}
                 className="flex-1 py-3 rounded-xl bg-warning-soft text-[var(--warning)] font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-50">
-                Ocurrió igual
+                {isPositive ? 'No lo hice' : 'Ocurrió igual'}
               </button>
             </div>
             <label className="flex items-center gap-2 text-sm text-text-muted cursor-pointer">

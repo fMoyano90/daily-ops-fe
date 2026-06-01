@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'motion/react'
-import { Flame, TrendingDown } from 'lucide-react'
+import { CheckCircle2, Flame, TrendingDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Habit } from '@/lib/types'
 
@@ -27,6 +27,8 @@ interface Props {
 
 export function HabitCard({ habit, streakDays, onClick }: Props) {
   const isAbstinence = habit.tracking_mode === 'abstinence'
+  const isPositive = habit.tracking_mode === 'positive'
+  const showsStreak = isAbstinence || isPositive
 
   return (
     <motion.button
@@ -50,17 +52,19 @@ export function HabitCard({ habit, streakDays, onClick }: Props) {
 
         {/* Streak / counter */}
         {streakDays !== undefined && (
-          <div className={cn('flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px]', isAbstinence ? 'bg-success-soft' : 'bg-info-soft')}>
-            {isAbstinence ? (
+          <div className={cn('flex flex-col items-center rounded-xl px-3 py-2 min-w-[64px]', showsStreak ? 'bg-success-soft' : 'bg-info-soft')}>
+            {isPositive ? (
+              <CheckCircle2 className="w-4 h-4 text-[var(--success)] mb-0.5" />
+            ) : isAbstinence ? (
               <Flame className="w-4 h-4 text-[var(--success)] mb-0.5" />
             ) : (
               <TrendingDown className="w-4 h-4 text-[var(--info)] mb-0.5" />
             )}
-            <span className={cn('text-2xl font-bold leading-none', isAbstinence ? 'text-[var(--success)]' : 'text-[var(--info)]')}>
+            <span className={cn('text-2xl font-bold leading-none', showsStreak ? 'text-[var(--success)]' : 'text-[var(--info)]')}>
               {streakDays}
             </span>
-            <span className={cn('text-[10px] font-medium', isAbstinence ? 'text-[var(--success)]' : 'text-[var(--info)]')}>
-              {isAbstinence ? 'días' : 'episod.'}
+            <span className={cn('text-[10px] font-medium', showsStreak ? 'text-[var(--success)]' : 'text-[var(--info)]')}>
+              {showsStreak ? 'días' : 'episod.'}
             </span>
           </div>
         )}

@@ -670,7 +670,7 @@ export interface SicknessEpisodeSummary {
 // ─── Habits ──────────────────────────────────────────────────────────────────
 
 export type HabitCategory = 'substance' | 'behavior' | 'digital' | 'other'
-export type HabitTrackingMode = 'abstinence' | 'control'
+export type HabitTrackingMode = 'positive' | 'abstinence' | 'control'
 export type HabitStatus = 'active' | 'paused' | 'achieved' | 'abandoned'
 export type HabitEventType = 'check_in' | 'urge' | 'relapse'
 
@@ -867,4 +867,146 @@ export interface FinanceLoan {
   description?: string | null
   created_at: string
   updated_at: string
+}
+
+// ── Exercise module ──────────────────────────────────────────────────────────
+
+export type ExerciseType = 'strength' | 'cardio' | 'mobility' | 'recovery'
+export type WorkoutExerciseStatus = 'pending' | 'completed' | 'partial' | 'skipped'
+export type ExerciseDayStatus = 'draft' | 'completed'
+
+export interface ExerciseSet {
+  set_number: number
+  reps_done?: number | null
+  weight_kg?: number | null
+  duration_seconds?: number | null
+  completed: boolean
+}
+
+export interface ExerciseProfile {
+  id: string
+  user_id: string
+  available_days: number[]
+  location?: string | null
+  equipment: string[]
+  session_duration_min?: number | null
+  fitness_level?: string | null
+  physical_restrictions?: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ExerciseProfileInput {
+  available_days?: number[]
+  location?: string | null
+  equipment?: string[]
+  session_duration_min?: number | null
+  fitness_level?: string | null
+  physical_restrictions?: string | null
+}
+
+export interface WorkoutExercise {
+  id: string
+  user_id: string
+  workout_day_id: string
+  date: string
+  name: string
+  exercise_type: ExerciseType
+  muscle_group?: string | null
+  sets?: number | null
+  reps?: number | null
+  weight_kg?: number | null
+  duration_min?: number | null
+  distance_km?: number | null
+  calories_burned?: number | null
+  intensity?: string | null
+  sort_order: number
+  status: WorkoutExerciseStatus
+  ai_suggested: boolean
+  notes?: string | null
+  ai_notes?: string | null
+  rest_seconds_recommended?: number | null
+  sets_data?: ExerciseSet[] | null
+  timer_seconds?: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkoutExerciseCreate {
+  date?: string
+  name: string
+  exercise_type?: ExerciseType
+  muscle_group?: string | null
+  sets?: number | null
+  reps?: number | null
+  weight_kg?: number | null
+  duration_min?: number | null
+  distance_km?: number | null
+  calories_burned?: number | null
+  intensity?: string | null
+  notes?: string | null
+}
+
+export interface WorkoutExerciseUpdate {
+  name?: string
+  exercise_type?: ExerciseType
+  muscle_group?: string | null
+  sets?: number | null
+  reps?: number | null
+  weight_kg?: number | null
+  duration_min?: number | null
+  distance_km?: number | null
+  calories_burned?: number | null
+  intensity?: string | null
+  status?: WorkoutExerciseStatus
+  sort_order?: number
+  notes?: string | null
+  rest_seconds_recommended?: number | null
+  sets_data?: ExerciseSet[] | null
+  timer_seconds?: number | null
+}
+
+export interface WorkoutDay {
+  id: string
+  user_id: string
+  daily_plan_id?: string | null
+  date: string
+  status: ExerciseDayStatus
+  total_calories_burned?: number | null
+  total_duration_min?: number | null
+  rpe?: number | null
+  post_workout_state?: string | null
+  day_note?: string | null
+  coach_notes?: string | null
+  ai_model?: string | null
+  analyzed_at?: string | null
+  exercises: WorkoutExercise[]
+  created_at: string
+  updated_at: string
+}
+
+export interface WorkoutDayUpdate {
+  rpe?: number | null
+  post_workout_state?: string | null
+  day_note?: string | null
+  status?: ExerciseDayStatus
+}
+
+export interface WorkoutWeekSummary {
+  period_start: string
+  period_end: string
+  total_days: number
+  trained_days: number
+  rest_days: number
+  total_calories_burned: number
+  total_duration_min: number
+  avg_rpe?: number | null
+  streak_days: number
+}
+
+export interface DailyContextInput {
+  energy_level?: string | null
+  available_time_min?: number | null
+  focus_area?: string | null
+  notes?: string | null
 }
