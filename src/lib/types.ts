@@ -796,14 +796,22 @@ export interface JiraTestResult {
 // ─── Finances ─────────────────────────────────────────────────────────────────
 
 export type FinanceEntryType = 'income' | 'expense'
+export type FinanceEntryKind = 'cash' | 'credit_purchase' | 'loan_given' | 'loan_repayment'
+export type FinanceEntryStatus = 'posted' | 'open' | 'paid' | 'cancelled'
 
 export interface FinanceEntry {
   id: string
   date: string
   type: FinanceEntryType
+  kind: FinanceEntryKind
   amount: number
   category: string
   description?: string | null
+  affects_balance: boolean
+  person?: string | null
+  due_date?: string | null
+  status: FinanceEntryStatus
+  linked_entry_id?: string | null
   created_at: string
   updated_at: string
 }
@@ -811,17 +819,29 @@ export interface FinanceEntry {
 export interface FinanceEntryCreate {
   date: string
   type: FinanceEntryType
+  kind?: FinanceEntryKind
   amount: number
   category: string
   description?: string | null
+  affects_balance?: boolean | null
+  person?: string | null
+  due_date?: string | null
+  status?: FinanceEntryStatus | null
+  linked_entry_id?: string | null
 }
 
 export interface FinanceEntryUpdate {
   date?: string
   type?: FinanceEntryType
+  kind?: FinanceEntryKind
   amount?: number
   category?: string
   description?: string | null
+  affects_balance?: boolean | null
+  person?: string | null
+  due_date?: string | null
+  status?: FinanceEntryStatus | null
+  linked_entry_id?: string | null
 }
 
 export interface FinanceSummary {
@@ -831,4 +851,20 @@ export interface FinanceSummary {
   opening_balance: number
   daily_balance: number
   balance: number
+  credit_pending: number
+  loans_pending: number
+}
+
+export interface FinanceLoan {
+  id: string
+  date: string
+  person: string
+  amount: number
+  repaid_amount: number
+  pending_amount: number
+  due_date?: string | null
+  status: FinanceEntryStatus
+  description?: string | null
+  created_at: string
+  updated_at: string
 }

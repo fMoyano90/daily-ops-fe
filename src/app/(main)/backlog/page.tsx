@@ -8,6 +8,7 @@ import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicat
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
 import { ProjectBadge } from '@/components/tasks/ProjectBadge'
 import { CategoryPicker } from '@/components/tasks/CategoryPicker'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
@@ -49,6 +50,7 @@ export default function BacklogPage() {
   const [editingProject, setEditingProject] = useState<string | null>(null)
   const [addingRecurring, setAddingRecurring] = useState<string | null>(null)
   const [addingToToday, setAddingToToday] = useState<string | null>(null)
+  const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null)
   const [deletingTask, setDeletingTask] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
@@ -198,12 +200,11 @@ export default function BacklogPage() {
       setDescriptionValue('')
     } catch (err) {
       console.error('Failed to update description:', err)
+      alert('No se pudo actualizar la descripción. Intentalo de nuevo.')
     }
   }
 
   const handleDeleteTask = async (task: Task) => {
-    if (!window.confirm(`¿Eliminar "${task.title}" del backlog? Esta acción no se puede deshacer.`)) return
-
     setDeletingTask(task.id)
     try {
       if (task.is_recurring && task.recurring_task_id) {
@@ -220,8 +221,10 @@ export default function BacklogPage() {
       })
     } catch (err) {
       console.error('Failed to delete task:', err)
+      alert('No se pudo eliminar la tarea. Intentalo de nuevo.')
     } finally {
       setDeletingTask(null)
+      setPendingDeleteTask(null)
     }
   }
 
@@ -420,7 +423,7 @@ export default function BacklogPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
                           {editingTitle === task.id ? (
-                            <div className="flex-1 flex gap-2">
+                            <div className="flex-1 flex flex-col sm:flex-row gap-2">
                               <input
                                 type="text"
                                 value={titleValue}
@@ -432,8 +435,10 @@ export default function BacklogPage() {
                                 className="flex-1 px-2 py-1 border border-accent rounded text-sm font-semibold bg-bg-elevated text-text focus:outline-none focus:ring-2 focus:ring-accent"
                                 autoFocus
                               />
-                              <button onClick={() => handleSaveTitle(task.id)} className="px-2 py-1 bg-accent text-accent-fg text-xs font-medium rounded hover:bg-[var(--accent-hover)] transition-colors">Guardar</button>
-                              <button onClick={() => { setEditingTitle(null); setTitleValue('') }} className="px-2 py-1 border border-border text-text-muted text-xs font-medium rounded hover:bg-bg-muted transition-colors">Cancelar</button>
+                              <div className="flex gap-2 sm:flex-shrink-0 mb-2">
+                                <button onClick={() => handleSaveTitle(task.id)} className="flex-1 sm:flex-initial px-3 py-1.5 bg-accent text-accent-fg text-xs font-medium rounded hover:bg-[var(--accent-hover)] transition-colors">Guardar</button>
+                                <button onClick={() => { setEditingTitle(null); setTitleValue('') }} className="flex-1 sm:flex-initial px-3 py-1.5 border border-border text-text-muted text-xs font-medium rounded hover:bg-bg-muted transition-colors">Cancelar</button>
+                              </div>
                             </div>
                           ) : (
                             <>
@@ -544,6 +549,14 @@ export default function BacklogPage() {
                             </span>
                           )}
                           {subtasks.length > 0 && <span className="text-xs text-text-subtle">{completedSubtasks}/{subtasks.length} subtareas</span>}
+                          <button
+                            onClick={() => setPendingDeleteTask(task)}
+                            disabled={deletingTask === task.id}
+                            className="p-1 text-text-subtle hover:text-[var(--danger)] transition-colors disabled:opacity-50"
+                            title="Eliminar tarea"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -601,7 +614,7 @@ export default function BacklogPage() {
                           <div>
                             <label className="block text-xs font-medium text-text-subtle mb-1.5">Tiempo estimado</label>
                             {editingEstimate === task.id ? (
-                              <div className="flex gap-2">
+                              <div className="flex flex-col sm:flex-row gap-2">
                                 <input
                                   type="number"
                                   min="0"
@@ -616,8 +629,10 @@ export default function BacklogPage() {
                                   className="flex-1 px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
                                   autoFocus
                                 />
-                                <button onClick={() => handleSaveEstimate(task.id)} className="px-3 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors">Guardar</button>
-                                <button onClick={() => { setEditingEstimate(null); setEstimateValue('') }} className="px-3 py-2 border border-border text-text-muted text-sm font-medium rounded-lg hover:bg-bg-muted transition-colors">Cancelar</button>
+                                <div className="flex gap-2 sm:flex-shrink-0">
+                                  <button onClick={() => handleSaveEstimate(task.id)} className="flex-1 sm:flex-initial px-3 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors">Guardar</button>
+                                  <button onClick={() => { setEditingEstimate(null); setEstimateValue('') }} className="flex-1 sm:flex-initial px-3 py-2 border border-border text-text-muted text-sm font-medium rounded-lg hover:bg-bg-muted transition-colors">Cancelar</button>
+                                </div>
                               </div>
                             ) : (
                               <button
@@ -633,7 +648,7 @@ export default function BacklogPage() {
                         <div>
                           <label className="block text-xs font-medium text-text-subtle mb-1.5">URL externa (Jira, etc.)</label>
                           {editingUrl === task.id ? (
-                            <div className="flex gap-2">
+                            <div className="flex flex-col sm:flex-row gap-2">
                               <input
                                 type="url"
                                 value={urlValue}
@@ -646,8 +661,10 @@ export default function BacklogPage() {
                                 className="flex-1 px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
                                 autoFocus
                               />
-                              <button onClick={() => handleSaveUrl(task.id)} className="px-3 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors">Guardar</button>
-                              <button onClick={() => { setEditingUrl(null); setUrlValue('') }} className="px-3 py-2 border border-border text-text-muted text-sm font-medium rounded-lg hover:bg-bg-muted transition-colors">Cancelar</button>
+                              <div className="flex gap-2 sm:flex-shrink-0">
+                                <button onClick={() => handleSaveUrl(task.id)} className="flex-1 sm:flex-initial px-3 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors">Guardar</button>
+                                <button onClick={() => { setEditingUrl(null); setUrlValue('') }} className="flex-1 sm:flex-initial px-3 py-2 border border-border text-text-muted text-sm font-medium rounded-lg hover:bg-bg-muted transition-colors">Cancelar</button>
+                              </div>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
@@ -716,7 +733,7 @@ export default function BacklogPage() {
 
                         <div className="pt-4 border-t border-border">
                           <button
-                            onClick={() => handleDeleteTask(task)}
+                            onClick={() => setPendingDeleteTask(task)}
                             disabled={deletingTask === task.id}
                             className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-[var(--danger)] bg-danger-soft rounded-lg hover:bg-[var(--danger)] hover:text-[var(--danger-fg)] transition-colors disabled:opacity-60"
                           >
@@ -733,6 +750,16 @@ export default function BacklogPage() {
           </motion.div>
         )}
       </div>
+      <ConfirmDialog
+        open={pendingDeleteTask !== null}
+        title="Eliminar tarea"
+        message={`¿Estás seguro de que quieres eliminar "${pendingDeleteTask?.title}" del backlog? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={() => pendingDeleteTask && handleDeleteTask(pendingDeleteTask)}
+        onCancel={() => setPendingDeleteTask(null)}
+        variant="danger"
+      />
     </div>
   )
 }

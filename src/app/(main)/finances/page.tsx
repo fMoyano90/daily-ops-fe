@@ -11,7 +11,8 @@ import { DailySummaryCard } from '@/components/finances/DailySummaryCard'
 import { FinanceEntryCard } from '@/components/finances/FinanceEntryCard'
 import { FinanceEntryForm } from '@/components/finances/FinanceEntryForm'
 import { api } from '@/lib/api'
-import { FinanceEntry, FinanceEntryCreate, FinanceSummary } from '@/lib/types'
+import { FinanceEntry, FinanceEntryCreate, FinanceLoan, FinanceSummary } from '@/lib/types'
+import { formatFinanceAmount } from '@/lib/finance'
 import { getTodayStr, toLocalDateStr } from '@/lib/utils'
 
 const listVariants = {
@@ -67,6 +68,8 @@ export default function FinancesPage() {
   const showDecimals = useSyncExternalStore(subscribeFinanceDecimalPreference, getFinanceDecimalPreference, () => false)
   const [selectedDate, setSelectedDate] = useState(getTodayStr())
   const [entries, setEntries] = useState<FinanceEntry[]>([])
+  const [creditPurchases, setCreditPurchases] = useState<FinanceEntry[]>([])
+  const [loans, setLoans] = useState<FinanceLoan[]>([])
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -77,12 +80,16 @@ export default function FinancesPage() {
     setLoading(true)
     setError(null)
     try {
-      const [data, sum] = await Promise.all([
+      const [data, sum, credits, activeLoans] = await Promise.all([
         api.finances.list({ date_from: date, date_to: date }),
         api.finances.summary(date),
+        api.finances.creditPurchases('open'),
+        api.finances.loans('open'),
       ])
       setEntries(data)
       setSummary(sum)
+      setCreditPurchases(credits)
+      setLoans(activeLoans)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo cargar')
     } finally {
@@ -121,8 +128,30 @@ export default function FinancesPage() {
     await load(selectedDate)
   }
 
+  async function handleMarkCreditPaid(entry: FinanceEntry) {
+    await api.finances.update(entry.id, { status: 'paid' })
+    await load(selectedDate)
+  }
+
+  async function handleLoanRepayment(loan: FinanceLoan) {
+    const value = window.prompt(`Monto devuelto por ${loan.person}`, showDecimals ? '' : String(Math.round(loan.pending_amount)))
+    if (value === null) return
+    const amount = parseFloat(value.replace(',', '.'))
+    if (isNaN(amount) || amount <= 0) {
+      setError('El monto devuelto debe ser mayor a 0')
+      return
+    }
+    await api.finances.repayLoan(loan.id, {
+      date: selectedDate,
+      amount,
+      description: `Devolución de ${loan.person}`,
+    })
+    await load(selectedDate)
+  }
+
   const incomes = entries.filter((e) => e.type === 'income')
-  const expenses = entries.filter((e) => e.type === 'expense')
+  const expenses = entries.filter((e) => e.type === 'expense' && e.kind !== 'credit_purchase')
+  const hasFinanceItems = entries.length > 0 || creditPurchases.length > 0 || loans.length > 0
 
   return (
     <div className="flex flex-col h-full">
@@ -189,7 +218,7 @@ export default function FinancesPage() {
 
           {loading ? (
             <div className="space-y-3"><SkeletonCard /><SkeletonCard /></div>
-          ) : entries.length === 0 ? (
+          ) : !hasFinanceItems ? (
             <EmptyState
               icon={<Wallet className="w-7 h-7" />}
               title="Sin movimientos"
@@ -225,6 +254,60 @@ export default function FinancesPage() {
                       </motion.li>
                     ))}
                   </motion.ul>
+                </section>
+              )}
+
+              {creditPurchases.length > 0 && (
+                <section>
+                  <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Compras con crédito pendientes</h3>
+                  <div className="space-y-2">
+                    {creditPurchases.map((entry) => (
+                      <div key={entry.id} className="flex items-center gap-3 px-4 py-3 rounded-xl bg-bg-muted border border-border">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-text truncate">{entry.category}</p>
+                          <p className="text-xs text-text-muted truncate">{entry.person || entry.description || 'Compra pendiente'}</p>
+                        </div>
+                        <span className="text-sm font-bold text-text flex-shrink-0">{formatFinanceAmount(entry.amount, showDecimals)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleMarkCreditPaid(entry)}
+                          className="px-2 py-1 rounded-lg text-xs font-medium text-accent hover:bg-accent-soft transition-colors"
+                        >
+                          Pagada
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {loans.length > 0 && (
+                <section>
+                  <h3 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Préstamos activos</h3>
+                  <div className="space-y-2">
+                    {loans.map((loan) => (
+                      <div key={loan.id} className="px-4 py-3 rounded-xl bg-bg-muted border border-border">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-text truncate">{loan.person}</p>
+                            <p className="text-xs text-text-muted truncate">
+                              Devuelto {formatFinanceAmount(loan.repaid_amount, showDecimals)} de {formatFinanceAmount(loan.amount, showDecimals)}
+                            </p>
+                          </div>
+                          <span className="text-sm font-bold text-[var(--warning,#ca8a04)] flex-shrink-0">
+                            {formatFinanceAmount(loan.pending_amount, showDecimals)}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleLoanRepayment(loan)}
+                          className="mt-3 w-full py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-colors"
+                        >
+                          Registrar devolución
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </section>
               )}
             </div>

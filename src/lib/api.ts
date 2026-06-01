@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceSummary } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceLoan, FinanceSummary } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -624,5 +624,10 @@ export const api = {
       fetchApi<FinanceEntry>(`/finances/entries/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: string) => fetchApi<void>(`/finances/entries/${id}`, { method: 'DELETE' }),
     summary: (date: string) => fetchApi<FinanceSummary>(`/finances/summary?date=${date}`),
+    creditPurchases: (status = 'open') =>
+      fetchApi<FinanceEntry[]>(`/finances/credit-purchases?status=${status}`),
+    loans: (status = 'open') => fetchApi<FinanceLoan[]>(`/finances/loans?status=${status}`),
+    repayLoan: (id: string, data: { date: string; amount: number; description?: string | null }) =>
+      fetchApi<FinanceLoan>(`/finances/loans/${id}/repay`, { method: 'POST', body: JSON.stringify(data) }),
   },
 }
