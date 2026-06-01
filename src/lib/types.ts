@@ -403,6 +403,7 @@ export interface HealthProfile {
   goal: NutritionGoal
   target_calories_override?: number | null
   glass_ml: number
+  country?: string | null
   age: number
   bmr: number
   tdee: number
@@ -420,6 +421,48 @@ export interface HealthProfileInput {
   goal: NutritionGoal
   target_calories_override?: number | null
   glass_ml: number
+  country?: string | null
+}
+
+export interface WeightEntry {
+  id: string
+  user_id: string
+  weight_kg: number
+  recorded_at: string
+  notes?: string | null
+  created_at: string
+}
+
+export interface SuggestedMeal {
+  meal_type: string
+  time_suggestion: string
+  description: string
+  estimated_calories: number
+  estimated_protein_g: number
+  estimated_carbs_g: number
+  estimated_fat_g: number
+}
+
+export interface MealPlan {
+  plan_summary: string
+  daily_calories_target: number
+  meals: SuggestedMeal[]
+}
+
+export interface PantryItemSuggestion {
+  name: string
+  reason: string
+  category: string
+}
+
+export interface PantryItem {
+  id: string
+  user_id: string
+  name: string
+  is_available: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
 }
 
 export interface MealEntry {
@@ -492,6 +535,7 @@ export interface NutritionDay {
   analyzed_at?: string | null
   ai_model?: string | null
   ai_summary?: string | null
+  ai_meal_plan?: MealPlan | null
   recommended_calories?: number | null
   consumed_calories?: number | null
   burned_calories?: number | null

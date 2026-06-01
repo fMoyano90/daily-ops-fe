@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceLoan, FinanceSummary, ExerciseProfile, ExerciseProfileInput, WorkoutDay, WorkoutDayUpdate, WorkoutExercise, WorkoutExerciseCreate, WorkoutExerciseUpdate, WorkoutWeekSummary, DailyContextInput } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, WeightEntry, PantryItem, PantryItemSuggestion, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceLoan, FinanceSummary, ExerciseProfile, ExerciseProfileInput, WorkoutDay, WorkoutDayUpdate, WorkoutExercise, WorkoutExerciseCreate, WorkoutExerciseUpdate, WorkoutWeekSummary, DailyContextInput } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -535,6 +535,16 @@ export const api = {
     setWater: (date: string, data: { delta?: number; water_ml?: number }) =>
       fetchApi<NutritionDay>(`/nutrition/${date}/water`, { method: 'POST', body: JSON.stringify(data) }),
     analyze: (date: string) => fetchApi<NutritionDay>(`/nutrition/${date}/analyze`, { method: 'POST' }),
+    generateMealPlan: (date: string, data: { context_type: string; context_text: string }) =>
+      fetchApi<NutritionDay>(`/nutrition/${date}/meal-plan`, { method: 'POST', body: JSON.stringify(data) }),
+    getWeightHistory: (limit = 90) => fetchApi<WeightEntry[]>(`/nutrition/weight-history?limit=${limit}`),
+    getPantry: () => fetchApi<PantryItem[]>('/nutrition/pantry'),
+    addPantryItem: (data: { name: string; is_available?: boolean }) =>
+      fetchApi<PantryItem>('/nutrition/pantry', { method: 'POST', body: JSON.stringify(data) }),
+    updatePantryItem: (id: string, data: { name?: string; is_available?: boolean; sort_order?: number }) =>
+      fetchApi<PantryItem>(`/nutrition/pantry/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    deletePantryItem: (id: string) => fetchApi<void>(`/nutrition/pantry/${id}`, { method: 'DELETE' }),
+    getPantrySuggestions: () => fetchApi<PantryItemSuggestion[]>('/nutrition/pantry/suggestions', { method: 'POST' }),
     weeklySummary: (weekStart?: string) => {
       const qs = weekStart ? `?week_start=${weekStart}` : ''
       return fetchApi<NutritionDaySummary>(`/nutrition/summary/week${qs}`)

@@ -10,7 +10,10 @@ import { DaySummary } from '@/components/nutrition/DaySummary'
 import { HealthProfileForm } from '@/components/nutrition/HealthProfileForm'
 import { MealEntryForm } from '@/components/nutrition/MealEntryForm'
 import { MealList } from '@/components/nutrition/MealList'
+import { MealPlanGenerator } from '@/components/nutrition/MealPlanGenerator'
+import { PantryManager } from '@/components/nutrition/PantryManager'
 import { WaterTracker } from '@/components/nutrition/WaterTracker'
+import { WeightHistory } from '@/components/nutrition/WeightHistory'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -93,6 +96,7 @@ export default function NutritionPage() {
   const [savingMeal, setSavingMeal] = useState(false)
   const [updatingWater, setUpdatingWater] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
+  const [profileRefreshKey, setProfileRefreshKey] = useState(0)
   const [editingProfile, setEditingProfile] = useState(false)
   const [timelineLoading, setTimelineLoading] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
@@ -148,6 +152,7 @@ export default function NutritionPage() {
       setProfile(saved)
       setStatusMessage('Perfil de salud guardado')
       setEditingProfile(false)
+      setProfileRefreshKey((k) => k + 1)
       await loadData()
     } catch (err) {
       console.error('Failed to save health profile:', err)
@@ -292,7 +297,9 @@ export default function NutritionPage() {
                   <span className="rounded-full bg-bg px-2.5 py-1 border border-border">{profile.height_cm} cm</span>
                   <span className="rounded-full bg-bg px-2.5 py-1 border border-border">{activityLabels[profile.activity_level]}</span>
                   <span className="rounded-full bg-bg px-2.5 py-1 border border-border">{nutritionGoalLabels[profile.goal]}</span>
+                  {profile.country && <span className="rounded-full bg-bg px-2.5 py-1 border border-border">{profile.country}</span>}
                 </div>
+                <WeightHistory refreshKey={profileRefreshKey} />
               </div>
             ) : (
               <HealthProfileForm key={profile?.updated_at ?? profile?.id ?? 'new'} profile={profile} saving={savingProfile} onSubmit={saveProfile} />
@@ -332,6 +339,16 @@ export default function NutritionPage() {
 
             <DaySummary day={day} analyzing={analyzing} canAnalyze={Boolean(profile && day.meals.length > 0)} onAnalyze={analyzeDay} />
 
+            {profile && (
+              <section aria-label="Plan de comidas IA" className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5">
+                <MealPlanGenerator
+                  date={selectedDate}
+                  existingPlan={day.ai_meal_plan}
+                  onGenerated={(updated) => { setDay(updated); setStatusMessage('Plan generado') }}
+                />
+              </section>
+            )}
+
             <section aria-labelledby="meals-title" className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5 space-y-4">
               <div>
                 <h2 id="meals-title" className="text-base font-semibold text-text">Comidas</h2>
@@ -340,6 +357,8 @@ export default function NutritionPage() {
               <MealEntryForm saving={savingMeal} onSubmit={addMeal} />
               <MealList meals={day.meals} onDelete={deleteMeal} />
             </section>
+
+            <PantryManager />
           </section>
         </div>
       </main>

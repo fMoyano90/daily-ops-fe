@@ -39,6 +39,7 @@ export function HealthProfileForm({ profile, saving = false, onSubmit }: HealthP
   const [goal, setGoal] = useState<NutritionGoal>(profile?.goal ?? 'lose')
   const [targetOverride, setTargetOverride] = useState(profile?.target_calories_override?.toString() ?? '')
   const [glassMl, setGlassMl] = useState(profile?.glass_ml ?? 200)
+  const [country, setCountry] = useState(profile?.country ?? '')
   const [formError, setFormError] = useState<string | null>(null)
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -58,6 +59,7 @@ export function HealthProfileForm({ profile, saving = false, onSubmit }: HealthP
       goal,
       target_calories_override: targetCaloriesOverride,
       glass_ml: glassMl,
+      country: country.trim() || null,
     })
   }
 
@@ -105,9 +107,15 @@ export function HealthProfileForm({ profile, saving = false, onSubmit }: HealthP
         </div>
       </div>
 
-      <div>
-        <label htmlFor="nutrition-target" className="block text-sm font-medium text-text mb-1">Calorías objetivo manuales</label>
-        <input id="nutrition-target" type="number" inputMode="numeric" min={800} max={10000} value={targetOverride} onChange={(event) => { setFormError(null); setTargetOverride(event.target.value) }} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Opcional" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="nutrition-target" className="block text-sm font-medium text-text mb-1">Calorías objetivo manuales</label>
+          <input id="nutrition-target" type="number" inputMode="numeric" min={800} max={10000} value={targetOverride} onChange={(event) => { setFormError(null); setTargetOverride(event.target.value) }} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Opcional" />
+        </div>
+        <div>
+          <label htmlFor="nutrition-country" className="block text-sm font-medium text-text mb-1">País</label>
+          <input id="nutrition-country" type="text" maxLength={100} value={country} onChange={(event) => setCountry(event.target.value)} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent" placeholder="Ej: Chile" />
+        </div>
       </div>
 
       {formError && <p role="alert" className="text-sm text-[var(--danger)]">{formError}</p>}
