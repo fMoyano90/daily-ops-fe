@@ -828,5 +828,7 @@ export interface FinanceSummary {
   date: string
   total_income: number
   total_expense: number
+  opening_balance: number
+  daily_balance: number
   balance: number
 }

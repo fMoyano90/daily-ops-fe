@@ -2,9 +2,15 @@
 
 import { useState } from 'react'
 import { FinanceEntry, FinanceEntryCreate, FinanceEntryType } from '@/lib/types'
+import { getTodayStr } from '@/lib/utils'
 
 const EXPENSE_CATEGORIES = ['Luz', 'Agua', 'Gas', 'Comida', 'Transporte', 'Alquiler', 'Salud', 'Entretenimiento', 'Otro']
 const INCOME_CATEGORIES = ['Sueldo', 'Freelance', 'Otro']
+const CUSTOM_CATEGORY = '__custom__'
+
+function getCategorySuggestions(type: FinanceEntryType) {
+  return type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
+}
 
 interface Props {
   initial?: FinanceEntry
@@ -14,18 +20,23 @@ interface Props {
 }
 
 export function FinanceEntryForm({ initial, defaultDate, onSave, onCancel }: Props) {
-  const today = defaultDate ?? new Date().toISOString().slice(0, 10)
-  const [type, setType] = useState<FinanceEntryType>(initial?.type ?? 'expense')
+  const today = defaultDate ?? getTodayStr()
+  const initialType = initial?.type ?? 'expense'
+  const initialCategory = initial?.category ?? ''
+  const isInitialSuggestedCategory = initialCategory
+    ? getCategorySuggestions(initialType).includes(initialCategory)
+    : true
+  const [type, setType] = useState<FinanceEntryType>(initialType)
   const [amount, setAmount] = useState(initial ? String(initial.amount) : '')
-  const [category, setCategory] = useState(initial?.category ?? '')
-  const [customCategory, setCustomCategory] = useState('')
+  const [category, setCategory] = useState(isInitialSuggestedCategory ? initialCategory : CUSTOM_CATEGORY)
+  const [customCategory, setCustomCategory] = useState(isInitialSuggestedCategory ? '' : initialCategory)
   const [date, setDate] = useState(initial?.date ?? today)
   const [description, setDescription] = useState(initial?.description ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const suggestions = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
-  const effectiveCategory = category === '__custom__' ? customCategory : category
+  const suggestions = getCategorySuggestions(type)
+  const effectiveCategory = category === CUSTOM_CATEGORY ? customCategory : category
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -57,7 +68,7 @@ export function FinanceEntryForm({ initial, defaultDate, onSave, onCancel }: Pro
           <button
             key={t}
             type="button"
-            onClick={() => { setType(t); setCategory('') }}
+            onClick={() => { setType(t); setCategory(''); setCustomCategory('') }}
             className={`flex-1 py-2.5 text-sm font-medium transition-colors ${type === t ? (t === 'income' ? 'bg-[var(--success,#10b981)] text-white' : 'bg-[var(--danger,#ef4444)] text-white') : 'text-text-muted hover:text-text hover:bg-bg-muted'}`}
           >
             {t === 'income' ? 'Ingreso' : 'Gasto'}
@@ -81,13 +92,13 @@ export function FinanceEntryForm({ initial, defaultDate, onSave, onCancel }: Pro
           ))}
           <button
             type="button"
-            onClick={() => setCategory('__custom__')}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${category === '__custom__' ? 'bg-accent text-white border-accent' : 'border-border text-text-muted hover:border-accent hover:text-accent'}`}
+            onClick={() => setCategory(CUSTOM_CATEGORY)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${category === CUSTOM_CATEGORY ? 'bg-accent text-white border-accent' : 'border-border text-text-muted hover:border-accent hover:text-accent'}`}
           >
             Personalizado
           </button>
         </div>
-        {category === '__custom__' && (
+        {category === CUSTOM_CATEGORY && (
           <input
             type="text"
             value={customCategory}

@@ -35,7 +35,7 @@ export function DailySummaryCard({ summary }: Props) {
       <div className={`rounded-xl p-3 flex flex-col gap-1 ${balance >= 0 ? 'bg-accent-soft' : 'bg-[var(--warning-soft,#fef9c3)]'}`}>
         <div className={`flex items-center gap-1.5 ${balance >= 0 ? 'text-accent' : 'text-[var(--warning,#ca8a04)]'}`}>
           <Scale className="w-4 h-4" />
-          <span className="text-xs font-medium">Balance</span>
+          <span className="text-xs font-medium">Saldo</span>
         </div>
         <span className="text-base font-bold text-text truncate">{fmt(balance)}</span>
       </div>

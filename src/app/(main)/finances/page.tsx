@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { motion, AnimatePresence } from 'motion/react'
+import { motion } from 'motion/react'
 import { Plus, ChevronLeft, ChevronRight, X, Wallet } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -12,6 +12,7 @@ import { FinanceEntryCard } from '@/components/finances/FinanceEntryCard'
 import { FinanceEntryForm } from '@/components/finances/FinanceEntryForm'
 import { api } from '@/lib/api'
 import { FinanceEntry, FinanceEntryCreate, FinanceSummary } from '@/lib/types'
+import { getTodayStr, toLocalDateStr } from '@/lib/utils'
 
 const listVariants = {
   hidden: {},
@@ -23,20 +24,22 @@ const itemVariants = {
 }
 
 function toDateStr(d: Date) {
-  return d.toISOString().slice(0, 10)
+  return toLocalDateStr(d)
 }
 
 function formatDateLabel(dateStr: string) {
   const d = new Date(dateStr + 'T12:00:00')
-  const today = toDateStr(new Date())
-  const yesterday = toDateStr(new Date(Date.now() - 86400000))
+  const today = getTodayStr()
+  const yesterdayDate = new Date()
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+  const yesterday = toDateStr(yesterdayDate)
   if (dateStr === today) return 'Hoy'
   if (dateStr === yesterday) return 'Ayer'
   return d.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 export default function FinancesPage() {
-  const [selectedDate, setSelectedDate] = useState(toDateStr(new Date()))
+  const [selectedDate, setSelectedDate] = useState(getTodayStr())
   const [entries, setEntries] = useState<FinanceEntry[]>([])
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
   const [loading, setLoading] = useState(true)
@@ -62,7 +65,10 @@ export default function FinancesPage() {
   }, [])
 
   useEffect(() => {
-    void load(selectedDate)
+    const timeout = window.setTimeout(() => {
+      void load(selectedDate)
+    }, 0)
+    return () => window.clearTimeout(timeout)
   }, [selectedDate, load])
 
   function shiftDate(days: number) {

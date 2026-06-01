@@ -5,7 +5,6 @@ import { Moon, Save } from 'lucide-react'
 import { SleepLog, SleepLogInput } from '@/lib/types'
 
 type SleepLogFormState = {
-  hours_slept: number
   sleep_quality: number
   bedtime: string
   wake_time: string
@@ -26,7 +25,6 @@ interface SleepLogFormProps {
 
 function initialState(log?: SleepLog | null): SleepLogFormState {
   return {
-    hours_slept: log?.hours_slept ?? 7.5,
     sleep_quality: log?.sleep_quality ?? 7,
     bedtime: log?.bedtime?.slice(0, 5) ?? '23:30',
     wake_time: log?.wake_time?.slice(0, 5) ?? '07:00',
@@ -37,13 +35,37 @@ function initialState(log?: SleepLog | null): SleepLogFormState {
   }
 }
 
+function calculateHoursSlept(bedtime: string, wakeTime: string): number | undefined {
+  const bedtimeMinutes = parseTimeToMinutes(bedtime)
+  const wakeMinutes = parseTimeToMinutes(wakeTime)
+
+  if (bedtimeMinutes == null || wakeMinutes == null) return undefined
+
+  const minutesSlept = wakeMinutes < bedtimeMinutes
+    ? wakeMinutes + 24 * 60 - bedtimeMinutes
+    : wakeMinutes - bedtimeMinutes
+
+  return Number((minutesSlept / 60).toFixed(2))
+}
+
+function parseTimeToMinutes(value: string): number | undefined {
+  const [hours, minutes] = value.split(':').map(Number)
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return undefined
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return undefined
+
+  return hours * 60 + minutes
+}
+
 export function SleepLogForm({ date, initialLog, saving = false, submitLabel, onSubmit, onCancel }: SleepLogFormProps) {
   const [form, setForm] = useState<SleepLogFormState>(() => initialState(initialLog))
+  const hoursSlept = calculateHoursSlept(form.bedtime, form.wake_time)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     await onSubmit({
       ...form,
+      hours_slept: hoursSlept,
       date,
       note: form.note.trim() || undefined,
     })
@@ -59,23 +81,6 @@ export function SleepLogForm({ date, initialLog, saving = false, submitLabel, on
           <h3 className="text-base font-semibold text-text">Registro del sueño</h3>
           <p className="text-sm text-text-muted mt-1">Captura cómo dormiste para detectar patrones de energía y foco.</p>
         </div>
-      </div>
-
-      <div>
-        <label htmlFor="hours-slept" className="flex items-center justify-between text-sm font-medium text-text mb-2">
-          Horas dormidas
-          <span className="font-mono text-accent">{form.hours_slept}h</span>
-        </label>
-        <input
-          id="hours-slept"
-          type="range"
-          min="0"
-          max="12"
-          step="0.5"
-          value={form.hours_slept}
-          onChange={(e) => setForm((prev) => ({ ...prev, hours_slept: Number(e.target.value) }))}
-          className="w-full accent-[var(--accent)]"
-        />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -99,6 +104,14 @@ export function SleepLogForm({ date, initialLog, saving = false, submitLabel, on
             className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-bg px-3 py-2">
+        <p className="flex items-center justify-between text-sm font-medium text-text">
+          Horas dormidas
+          <span className="font-mono text-accent">{hoursSlept != null ? `${hoursSlept}h` : '--'}</span>
+        </p>
+        <p className="mt-1 text-xs text-text-subtle">Se calcula automáticamente con la hora de dormir y despertar.</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
