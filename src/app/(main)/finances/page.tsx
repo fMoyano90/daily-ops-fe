@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react'
 import { motion } from 'motion/react'
 import { Plus, ChevronLeft, ChevronRight, X, Wallet } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
@@ -23,6 +23,31 @@ const itemVariants = {
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 }
 
+const FINANCE_DECIMALS_KEY = 'dailyops-finance-show-decimals'
+const FINANCE_DECIMALS_EVENT = 'dailyops-finance-decimals-change'
+
+function getFinanceDecimalPreference() {
+  if (typeof window === 'undefined') return false
+  return window.localStorage.getItem(FINANCE_DECIMALS_KEY) === 'true'
+}
+
+function subscribeFinanceDecimalPreference(callback: () => void) {
+  if (typeof window === 'undefined') return () => {}
+
+  window.addEventListener('storage', callback)
+  window.addEventListener(FINANCE_DECIMALS_EVENT, callback)
+
+  return () => {
+    window.removeEventListener('storage', callback)
+    window.removeEventListener(FINANCE_DECIMALS_EVENT, callback)
+  }
+}
+
+function setFinanceDecimalPreference(value: boolean) {
+  window.localStorage.setItem(FINANCE_DECIMALS_KEY, value ? 'true' : 'false')
+  window.dispatchEvent(new Event(FINANCE_DECIMALS_EVENT))
+}
+
 function toDateStr(d: Date) {
   return toLocalDateStr(d)
 }
@@ -39,6 +64,7 @@ function formatDateLabel(dateStr: string) {
 }
 
 export default function FinancesPage() {
+  const showDecimals = useSyncExternalStore(subscribeFinanceDecimalPreference, getFinanceDecimalPreference, () => false)
   const [selectedDate, setSelectedDate] = useState(getTodayStr())
   const [entries, setEntries] = useState<FinanceEntry[]>([])
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
@@ -126,8 +152,25 @@ export default function FinancesPage() {
             </button>
           </div>
 
+          <div className="mb-4 rounded-xl border border-border bg-bg-elevated px-4 py-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-text">Mostrar decimales</p>
+              <p className="text-xs text-text-muted">{showDecimals ? 'Montos monedas con decimales' : 'Montos monedas sin decimales'}</p>
+            </div>
+            <label className="relative inline-flex cursor-pointer items-center" aria-label="Mostrar decimales en finanzas">
+              <input
+                type="checkbox"
+                checked={showDecimals}
+                onChange={(event) => setFinanceDecimalPreference(event.target.checked)}
+                className="sr-only peer"
+              />
+              <span className="h-6 w-11 rounded-full bg-bg-muted transition-colors peer-checked:bg-accent" />
+              <span className="absolute left-1 h-4 w-4 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
+            </label>
+          </div>
+
           {/* Summary */}
-          <DailySummaryCard summary={summary} />
+          <DailySummaryCard summary={summary} showDecimals={showDecimals} />
 
           {/* Add button */}
           <button
@@ -165,7 +208,7 @@ export default function FinancesPage() {
                   <motion.ul variants={listVariants} initial="hidden" animate="show" className="space-y-2">
                     {incomes.map((e) => (
                       <motion.li key={e.id} variants={itemVariants}>
-                        <FinanceEntryCard entry={e} onEdit={setEditing} onDelete={handleDelete} />
+                        <FinanceEntryCard entry={e} showDecimals={showDecimals} onEdit={setEditing} onDelete={handleDelete} />
                       </motion.li>
                     ))}
                   </motion.ul>
@@ -178,7 +221,7 @@ export default function FinancesPage() {
                   <motion.ul variants={listVariants} initial="hidden" animate="show" className="space-y-2">
                     {expenses.map((e) => (
                       <motion.li key={e.id} variants={itemVariants}>
-                        <FinanceEntryCard entry={e} onEdit={setEditing} onDelete={handleDelete} />
+                        <FinanceEntryCard entry={e} showDecimals={showDecimals} onEdit={setEditing} onDelete={handleDelete} />
                       </motion.li>
                     ))}
                   </motion.ul>
@@ -192,6 +235,7 @@ export default function FinancesPage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo movimiento">
         <FinanceEntryForm
           defaultDate={selectedDate}
+          showDecimals={showDecimals}
           onSave={handleCreate}
           onCancel={() => setShowForm(false)}
         />
@@ -202,6 +246,7 @@ export default function FinancesPage() {
           <FinanceEntryForm
             initial={editing}
             defaultDate={selectedDate}
+            showDecimals={showDecimals}
             onSave={handleEdit}
             onCancel={() => setEditing(null)}
           />

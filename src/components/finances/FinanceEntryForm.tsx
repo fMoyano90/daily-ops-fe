@@ -15,11 +15,12 @@ function getCategorySuggestions(type: FinanceEntryType) {
 interface Props {
   initial?: FinanceEntry
   defaultDate?: string
+  showDecimals: boolean
   onSave: (data: FinanceEntryCreate) => Promise<void>
   onCancel: () => void
 }
 
-export function FinanceEntryForm({ initial, defaultDate, onSave, onCancel }: Props) {
+export function FinanceEntryForm({ initial, defaultDate, showDecimals, onSave, onCancel }: Props) {
   const today = defaultDate ?? getTodayStr()
   const initialType = initial?.type ?? 'expense'
   const initialCategory = initial?.category ?? ''
@@ -44,6 +45,7 @@ export function FinanceEntryForm({ initial, defaultDate, onSave, onCancel }: Pro
     const parsedAmount = parseFloat(amount.replace(',', '.'))
     if (!effectiveCategory.trim()) return setError('Seleccioná o escribí una categoría')
     if (isNaN(parsedAmount) || parsedAmount <= 0) return setError('El monto debe ser mayor a 0')
+    if (!showDecimals && !Number.isInteger(parsedAmount)) return setError('El monto debe ser un número entero')
     setSaving(true)
     try {
       await onSave({
@@ -115,15 +117,18 @@ export function FinanceEntryForm({ initial, defaultDate, onSave, onCancel }: Pro
         <label className="text-xs font-medium text-text-muted uppercase tracking-wide">Monto</label>
         <input
           type="number"
-          inputMode="decimal"
+          inputMode={showDecimals ? 'decimal' : 'numeric'}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          min="0.01"
-          step="0.01"
+          placeholder={showDecimals ? '0,00' : '0'}
+          min={showDecimals ? '0.01' : '1'}
+          step={showDecimals ? '0.01' : '1'}
           required
           className="w-full px-3 py-2.5 rounded-lg border border-border bg-bg text-sm text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent"
         />
+        <p className="text-xs text-text-subtle">
+          {showDecimals ? 'Acepta montos con decimales.' : 'Modo peso chileno: ingresa montos sin decimales.'}
+        </p>
       </div>
 
       {/* Date */}

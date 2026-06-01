@@ -1,17 +1,15 @@
 import { Pencil, Trash2 } from 'lucide-react'
 import { FinanceEntry } from '@/lib/types'
+import { formatFinanceAmount } from '@/lib/finance'
 
 interface Props {
   entry: FinanceEntry
+  showDecimals: boolean
   onEdit: (entry: FinanceEntry) => void
   onDelete: (id: string) => void
 }
 
-function fmt(n: number) {
-  return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 2 }).format(n)
-}
-
-export function FinanceEntryCard({ entry, onEdit, onDelete }: Props) {
+export function FinanceEntryCard({ entry, showDecimals, onEdit, onDelete }: Props) {
   const isIncome = entry.type === 'income'
 
   return (
@@ -31,7 +29,7 @@ export function FinanceEntryCard({ entry, onEdit, onDelete }: Props) {
       </div>
 
       <span className={`text-sm font-bold flex-shrink-0 ${isIncome ? 'text-[var(--success,#10b981)]' : 'text-[var(--danger,#ef4444)]'}`}>
-        {isIncome ? '+' : '-'}{fmt(entry.amount)}
+        {isIncome ? '+' : '-'}{formatFinanceAmount(entry.amount, showDecimals)}
       </span>
 
       <div className="flex items-center gap-1 flex-shrink-0">
