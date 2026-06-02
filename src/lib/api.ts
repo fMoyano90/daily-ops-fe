@@ -1,4 +1,4 @@
-import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, WeightEntry, PantryItem, PantryItemSuggestion, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceLoan, FinanceSummary, ExerciseProfile, ExerciseProfileInput, WorkoutDay, WorkoutDayUpdate, WorkoutExercise, WorkoutExerciseCreate, WorkoutExerciseUpdate, WorkoutWeekSummary, DailyContextInput } from '@/lib/types'
+import { DailyTask, DailySubtask, DailyPlan, HistoryDay, Project, Task, TimerSession, Subtask, RecurringTask, RecurringInstance, JiraConnection, JiraSyncResult, JiraTestResult, TaskComment, User, Goal, GoalStep, GoalComment, GoalSummary, EmotionEntry, EmotionSummary, DailyReflection, DailyReflectionInput, DailyReflectionSummary, SleepLog, SleepLogInput, SleepLogSummary, HealthProfile, HealthProfileInput, MealEntry, MealEntryInput, MealEntryUpdate, ExerciseEntry, ExerciseEntryInput, ExerciseEntryUpdate, NutritionDay, NutritionDaySummary, WeightEntry, PantryItem, PantryItemSuggestion, HealthCondition, HealthConditionInput, HealthConditionUpdate, HealthGuideline, HealthGuidelineInput, HealthGuidelineUpdate, HealthReminder, HealthReminderInput, HealthReminderUpdate, GuidelineSuggestion, SicknessEpisode, SicknessEpisodeInput, SicknessEpisodeUpdate, SicknessEpisodeSummary, Habit, HabitCreate, HabitUpdate, HabitEvent, HabitEventCreate, HabitEventUpdate, HabitSummary, FinanceEntry, FinanceEntryCreate, FinanceEntryUpdate, FinanceLoan, FinanceSummary, ExerciseProfile, ExerciseProfileInput, WorkoutDay, WorkoutDayUpdate, WorkoutExercise, WorkoutExerciseCreate, WorkoutExerciseUpdate, WorkoutWeekSummary, DailyContextInput, Capture, CaptureCreate, CaptureUpdate } from '@/lib/types'
 import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
@@ -669,5 +669,44 @@ export const api = {
       const qs = weekStart ? `?week_start=${weekStart}` : ''
       return fetchApi<WorkoutWeekSummary>(`/exercise/summary/week${qs}`)
     },
+  },
+
+  captures: {
+    list: (params?: Record<string, string>) => {
+      const qs = params ? '?' + new URLSearchParams(params).toString() : ''
+      return fetchApi<Capture[]>(`/captures${qs}`)
+    },
+    stats: () => fetchApi<Record<string, Record<string, number>>>('/captures/stats'),
+    create: (data: CaptureCreate) =>
+      fetchApi<Capture>('/captures', { method: 'POST', body: JSON.stringify(data) }),
+    get: (id: string) => fetchApi<Capture>(`/captures/${id}`),
+    update: (id: string, data: CaptureUpdate) =>
+      fetchApi<Capture>(`/captures/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+    delete: (id: string) => fetchApi<void>(`/captures/${id}`, { method: 'DELETE' }),
+    archive: (id: string) =>
+      fetchApi<Capture>(`/captures/${id}/archive`, { method: 'POST' }),
+    review: (id: string) =>
+      fetchApi<Capture>(`/captures/${id}/review`, { method: 'POST' }),
+    uploadAttachment: async (captureId: string, file: File) => {
+      const token = getAccessToken()
+      const headers: Record<string, string> = {}
+      if (token) headers['Authorization'] = `Bearer ${token}`
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch(`${API_BASE}/captures/${captureId}/attachments`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(formatApiError(error, 'Upload failed'))
+      }
+      return (await res.json()) as Capture
+    },
+    deleteAttachment: (captureId: string, attachmentId: string) =>
+      fetchApi<void>(`/captures/${captureId}/attachments/${attachmentId}`, { method: 'DELETE' }),
+    getAttachmentUrl: (captureId: string, attachmentId: string) =>
+      fetchApi<{ url: string; mime_type: string; file_name: string }>(`/captures/${captureId}/attachments/${attachmentId}/url`),
   },
 }

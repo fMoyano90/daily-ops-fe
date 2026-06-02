@@ -1054,3 +1054,53 @@ export interface DailyContextInput {
   focus_area?: string | null
   notes?: string | null
 }
+
+// ─── Captures ──────────────────────────────────────────────────────────────────
+
+export type CaptureType = 'text' | 'url' | 'image' | 'voice' | 'mixed'
+
+export type CaptureStatus = 'inbox' | 'reviewed' | 'converted' | 'archived'
+
+export interface CaptureAttachment {
+  id: string
+  kind: string
+  file_name: string
+  mime_type: string
+  size_bytes: number
+  duration_seconds: number | null
+  created_at: string
+}
+
+export interface Capture {
+  id: string
+  user_id: string
+  title: string | null
+  content: string | null
+  capture_type: CaptureType
+  source_url: string | null
+  status: CaptureStatus
+  tags: string[]
+  note_date: string
+  transcript: string | null
+  converted_task_id: string | null
+  attachments: CaptureAttachment[]
+  created_at: string
+  updated_at: string
+}
+
+export interface CaptureCreate {
+  title?: string | null
+  content?: string | null
+  capture_type?: CaptureType | null
+  source_url?: string | null
+  tags?: string[] | null
+  note_date?: string | null
+}
+
+export interface CaptureUpdate {
+  title?: string | null
+  content?: string | null
+  source_url?: string | null
+  tags?: string[] | null
+  status?: CaptureStatus | null
+}

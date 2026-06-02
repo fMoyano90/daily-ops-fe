@@ -22,12 +22,14 @@ import {
   Sprout,
   Wallet,
   Dumbbell,
+  Lightbulb,
 } from 'lucide-react'
 
 const navItems = [
   { href: '/today', label: 'Hoy', icon: Sun },
   { href: '/backlog', label: 'Backlog', icon: ListTodo },
   { href: '/add-task', label: 'Agregar tarea', icon: PlusCircle },
+  { href: '/captures', label: 'Capturas', icon: Lightbulb },
   { href: '/recurring', label: 'Recurrentes', icon: Repeat2 },
   { href: '/goals', label: 'Metas', icon: Target },
   { href: '/habits', label: 'Hábitos', icon: Sprout },
