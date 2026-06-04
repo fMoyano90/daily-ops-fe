@@ -361,9 +361,9 @@ export default function HealthPage() {
     return (
       <div>
         <Header title="Salud" subtitle="Cargando condiciones y episodios..." />
-        <div className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
           <SkeletonStats />
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-5">
+          <div className="space-y-5">
             <SkeletonCard />
             <SkeletonCard />
           </div>
@@ -377,7 +377,7 @@ export default function HealthPage() {
       <PullToRefreshIndicator pull={ptr.pull} refreshing={ptr.refreshing} progress={ptr.progress} />
       <Header title="Salud" subtitle="Registra condiciones, cuidados y episodios de malestar" />
 
-      <main className="p-4 md:p-8 max-w-6xl mx-auto space-y-6">
+      <main className="p-4 md:p-8 max-w-7xl mx-auto space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <InsightCard icon={<HeartPulse className="w-4 h-4" />} label="Condiciones activas" value={activeConditions.toString()} tone="text-accent bg-accent-soft" />
           <InsightCard icon={<ClipboardCheck className="w-4 h-4" />} label="Acciones pendientes" value={pendingActions.toString()} tone="text-[var(--warning)] bg-warning-soft" />
@@ -388,7 +388,7 @@ export default function HealthPage() {
         {error && <div role="alert" className="p-3 rounded-xl border border-danger-soft bg-danger-soft/40 text-sm text-[var(--danger)]">{error}</div>}
         <p className="sr-only" aria-live="polite" aria-atomic="true">{statusMessage}</p>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-5 items-start">
+        <div className="space-y-5">
           <section aria-labelledby="conditions-title" className="space-y-4">
             <div className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
@@ -432,7 +432,7 @@ export default function HealthPage() {
             </div>
           </section>
 
-          <aside className="space-y-5 lg:sticky lg:top-28">
+          <aside className="space-y-5">
             <section aria-labelledby="episodes-title" className="bg-bg-elevated border border-border rounded-2xl p-4 md:p-5 space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -560,7 +560,7 @@ function ConditionCard(props: {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 mt-5">
+      <div className="grid grid-cols-1 md:grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-3 mt-5">
         {(['avoid', 'helps', 'action'] as GuidelineKind[]).map((kind) => (
           <GuidelineBlock
             key={kind}
