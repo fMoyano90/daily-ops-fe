@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type DragEvent } from 'react'
 import { motion } from 'motion/react'
 import { Header } from '@/components/layout/Header'
 import { TaskCard } from '@/components/today/TaskCard'
@@ -12,7 +12,7 @@ import { SkeletonStats } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
 import { DailyTask, DailyTaskStatus, EmotionEnergy, EmotionEntry, EmotionValence, Priority, SubtaskStatus, Task, Project, TaskEmotionPhase } from '@/lib/types'
 import { normalizeExternalUrl } from '@/lib/utils'
-import { Plus, Inbox, Clock, ExternalLink, Repeat2, Tag, Bell } from 'lucide-react'
+import { Plus, Inbox, Clock, ExternalLink, Repeat2, Tag, Bell, GripVertical } from 'lucide-react'
 import Link from 'next/link'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
 import { PullToRefreshIndicator } from '@/components/shared/PullToRefreshIndicator'
@@ -35,6 +35,22 @@ const listVariants = {
 const itemVariants = {
   hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
+}
+
+function sortDailyTasks(items: DailyTask[]) {
+  return [...items].sort((a, b) => {
+    const aDone = a.status === 'completed' ? 1 : 0
+    const bDone = b.status === 'completed' ? 1 : 0
+    if (aDone !== bDone) return aDone - bDone
+
+    const orderDiff = (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    if (orderDiff !== 0) return orderDiff
+    return priorityOrder[a.priority] - priorityOrder[b.priority]
+  })
+}
+
+function isCompletedTask(task: DailyTask) {
+  return task.status === 'completed'
 }
 
 const taskEmotionOptions: Array<{ value: string; label: string; valence: EmotionValence }> = [
@@ -82,6 +98,8 @@ export default function TodayPage() {
   const [activeSessionsByTaskId, setActiveSessionsByTaskId] = useState<Record<string, string>>({})
   const [timerBusyTaskIds, setTimerBusyTaskIds] = useState<Set<string>>(new Set())
   const [pendingEmotionAction, setPendingEmotionAction] = useState<PendingEmotionAction | null>(null)
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null)
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
 
   const setTimerBusy = (taskId: string, busy: boolean) => {
     setTimerBusyTaskIds((prev) => {
@@ -513,17 +531,69 @@ export default function TodayPage() {
     }
   }
 
+  const handleTaskDragStart = (event: DragEvent<HTMLButtonElement>, taskId: string) => {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', taskId)
+    setDraggingTaskId(taskId)
+  }
+
+  const handleTaskDragOver = (event: DragEvent<HTMLDivElement>, targetTaskId: string) => {
+    if (!draggingTaskId || draggingTaskId === targetTaskId) return
+    const sourceTask = tasks.find((task) => task.id === draggingTaskId)
+    const targetTask = tasks.find((task) => task.id === targetTaskId)
+    if (!sourceTask || !targetTask || isCompletedTask(sourceTask) !== isCompletedTask(targetTask)) return
+
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    if (dragOverTaskId !== targetTaskId) setDragOverTaskId(targetTaskId)
+  }
+
+  const handleTaskDragEnd = () => {
+    setDraggingTaskId(null)
+    setDragOverTaskId(null)
+  }
+
+  const reorderTasks = async (sourceTaskId: string, targetTaskId: string) => {
+    if (!planId || sourceTaskId === targetTaskId) return
+
+    const currentOrder = sortDailyTasks(tasks)
+    const sourceIndex = currentOrder.findIndex((task) => task.id === sourceTaskId)
+    const targetIndex = currentOrder.findIndex((task) => task.id === targetTaskId)
+    if (sourceIndex < 0 || targetIndex < 0) return
+
+    const sourceTask = currentOrder[sourceIndex]
+    const targetTask = currentOrder[targetIndex]
+    if (isCompletedTask(sourceTask) !== isCompletedTask(targetTask)) return
+
+    const nextOrder = [...currentOrder]
+    const [movedTask] = nextOrder.splice(sourceIndex, 1)
+    nextOrder.splice(targetIndex, 0, movedTask)
+
+    const previousTasks = tasks
+    const nextById = new Map(nextOrder.map((task, index) => [task.id, { ...task, sort_order: index }]))
+    setTasks((prev) => prev.map((task) => nextById.get(task.id) ?? task))
+
+    try {
+      await api.dailyPlans.reorder(planId, nextOrder.map((task) => task.id))
+    } catch (err) {
+      console.error('Failed to reorder tasks:', err)
+      setTasks(previousTasks)
+    }
+  }
+
+  const handleTaskDrop = (event: DragEvent<HTMLDivElement>, targetTaskId: string) => {
+    event.preventDefault()
+    const sourceTaskId = event.dataTransfer.getData('text/plain') || draggingTaskId
+    handleTaskDragEnd()
+    if (sourceTaskId) void reorderTasks(sourceTaskId, targetTaskId)
+  }
+
   const completedCount = tasks.filter((t) => t.status === 'completed').length
   const inProgressCount = tasks.filter((t) => t.status === 'in_progress' || t.status === 'paused').length
   const plannedCount = tasks.filter((t) => t.status === 'planned').length
   const totalSeconds = tasks.reduce((acc, t) => acc + (t.live_total_seconds ?? t.total_seconds), 0)
 
-  const sortedTasks = [...tasks].sort((a, b) => {
-    const aDone = a.status === 'completed' ? 1 : 0
-    const bDone = b.status === 'completed' ? 1 : 0
-    if (aDone !== bDone) return aDone - bDone
-    return priorityOrder[a.priority] - priorityOrder[b.priority]
-  })
+  const sortedTasks = sortDailyTasks(tasks)
   const pendingEmotionTask = pendingEmotionAction ? tasks.find((t) => t.id === pendingEmotionAction.taskId) : null
 
   if (loading) {
@@ -682,7 +752,17 @@ export default function TodayPage() {
               animate="show"
             >
               {sortedTasks.map((task) => (
-                <motion.div key={task.id} variants={itemVariants}>
+                <motion.div
+                  key={task.id}
+                  variants={itemVariants}
+                  onDragOver={(event) => handleTaskDragOver(event, task.id)}
+                  onDrop={(event) => handleTaskDrop(event, task.id)}
+                  className={`rounded-xl transition-all ${
+                    dragOverTaskId === task.id && draggingTaskId !== task.id
+                      ? 'outline outline-2 outline-accent outline-offset-2'
+                      : ''
+                  } ${draggingTaskId === task.id ? 'opacity-60' : ''}`}
+                >
                   <SwipeAction
                     disabled={false}
                     onSwipeRight={() => task.status === 'completed' ? handleReopenTask(task.id) : handleUpdateStatus(task.id, 'completed')}
@@ -704,6 +784,19 @@ export default function TodayPage() {
                       onPauseTimer={handlePauseTimer}
                       onResumeTimer={handleResumeTimer}
                       onResetTimer={handleResetTimer}
+                      dragHandle={
+                        <button
+                          type="button"
+                          draggable={tasks.length > 1}
+                          onDragStart={(event) => handleTaskDragStart(event, task.id)}
+                          onDragEnd={handleTaskDragEnd}
+                          aria-label="Arrastrar para reordenar tarea"
+                          title="Arrastrar para reordenar"
+                          className="-m-1 touch-target cursor-grab text-text-subtle transition-colors hover:text-text active:cursor-grabbing"
+                        >
+                          <GripVertical className="w-4 h-4" />
+                        </button>
+                      }
                     />
                   </SwipeAction>
                 </motion.div>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { DailyTask, DailyTaskStatus, Priority } from '@/lib/types'
 import { ProjectBadge } from '@/components/tasks/ProjectBadge'
@@ -30,6 +30,7 @@ interface TaskCardProps {
   onPauseTimer: (taskId: string) => void
   onResumeTimer: (taskId: string) => void
   onResetTimer: (taskId: string) => void
+  dragHandle?: ReactNode
 }
 
 export function TaskCard({
@@ -48,6 +49,7 @@ export function TaskCard({
   onPauseTimer,
   onResumeTimer,
   onResetTimer,
+  dragHandle,
 }: TaskCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [descriptionOpen, setDescriptionOpen] = useState(false)
@@ -168,6 +170,8 @@ export function TaskCard({
 
       <div className="relative p-4">
         <div className="flex items-start gap-3 md:gap-4">
+          {dragHandle && <div className="mt-0.5 flex-shrink-0">{dragHandle}</div>}
+
           <button
             onClick={() => setExpanded(!expanded)}
             aria-label={expanded ? 'Colapsar' : 'Expandir'}
