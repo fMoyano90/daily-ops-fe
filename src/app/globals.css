@@ -299,6 +299,94 @@ textarea::placeholder {
   outline-offset: 2px;
 }
 
+.rich-text-content {
+  font-size: 0.9375rem;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.rich-text-content p,
+.rich-text-content ul,
+.rich-text-content ol,
+.rich-text-content blockquote,
+.rich-text-content pre {
+  margin: 0.65rem 0;
+}
+
+.rich-text-content h2 {
+  margin: 1rem 0 0.45rem;
+  font-size: 1.1rem;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.rich-text-content h3 {
+  margin: 0.9rem 0 0.4rem;
+  font-size: 1rem;
+  line-height: 1.4;
+  font-weight: 700;
+}
+
+.rich-text-content ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+
+.rich-text-content ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+
+.rich-text-content blockquote {
+  border-left: 3px solid var(--accent);
+  color: var(--text-muted);
+  padding-left: 0.85rem;
+}
+
+.rich-text-content code {
+  border-radius: 0.375rem;
+  background: var(--bg-muted);
+  padding: 0.1rem 0.3rem;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.86em;
+}
+
+.rich-text-content pre {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  background: var(--bg-muted);
+  padding: 0.85rem;
+}
+
+.rich-text-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.rich-text-content .rich-text-image {
+  display: block;
+  max-width: 100%;
+  max-height: 22rem;
+  margin: 0.85rem 0;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--bg-muted);
+  object-fit: contain;
+}
+
+.rich-text-content.ProseMirror-focused .rich-text-image.ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.rich-text-content p.is-editor-empty:first-child::before {
+  color: var(--text-subtle);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
 /* ── Mobile bottom nav spacer ──────────────────────────────────── */
 .pb-bottom-nav {
   padding-bottom: calc(64px + env(safe-area-inset-bottom));

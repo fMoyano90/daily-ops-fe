@@ -1,10 +1,12 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Header } from '@/components/layout/Header'
 import { api } from '@/lib/api'
-import { Project } from '@/lib/types'
+import { Project, type RichTextDoc } from '@/lib/types'
+import { RichTextEditor } from '@/components/rich-text/RichTextEditor'
+import { collectImageAttachmentIds, emptyRichTextDoc, replaceImageAttachmentIds } from '@/lib/rich-text'
 import { TASK_CATEGORIES, isScheduledCategory } from '@/lib/categories'
 import { normalizeExternalUrl } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -15,7 +17,7 @@ export default function AddTaskPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<Project[]>([])
   const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const [descriptionDoc, setDescriptionDoc] = useState<RichTextDoc>(() => emptyRichTextDoc())
   const [projectId, setProjectId] = useState('')
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'critical'>('medium')
   const [estimatedMinutes, setEstimatedMinutes] = useState('')
@@ -26,6 +28,8 @@ export default function AddTaskPage() {
   const [reminderMinutes, setReminderMinutes] = useState<number | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+  const tempImagesRef = useRef<Record<string, File>>({})
+  const tempImageUrlsRef = useRef<Record<string, string>>({})
 
   useEffect(() => {
     const loadProjects = async () => {
@@ -37,7 +41,19 @@ export default function AddTaskPage() {
       }
     }
     loadProjects()
+    const tempImageUrls = tempImageUrlsRef.current
+    return () => {
+      Object.values(tempImageUrls).forEach((url) => URL.revokeObjectURL(url))
+    }
   }, [])
+
+  const uploadTemporaryImage = async (file: File) => {
+    const id = `temp_${crypto.randomUUID()}`
+    const src = URL.createObjectURL(file)
+    tempImagesRef.current[id] = file
+    tempImageUrlsRef.current[id] = src
+    return { attachmentId: id, src, fileName: file.name }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,10 +67,10 @@ export default function AddTaskPage() {
 
     setLoading(true)
     try {
-      await api.tasks.create({
+      const created = await api.tasks.create({
         project_id: projectId,
         title,
-        description: description || null,
+        description_doc: descriptionDoc,
         source: 'manual',
         priority,
         estimated_seconds: estimatedMinutes ? Number(estimatedMinutes) * 60 : null,
@@ -64,6 +80,18 @@ export default function AddTaskPage() {
         category: category || null,
         reminder_minutes_before: isScheduledCategory(category) && meetingTime ? reminderMinutes : null,
       })
+
+      const replacements: Record<string, { id: string; src?: string }> = {}
+      for (const tempId of collectImageAttachmentIds(descriptionDoc)) {
+        const file = tempImagesRef.current[tempId]
+        if (!file) continue
+        const attachment = await api.tasks.uploadDescriptionAttachment(created.id, file)
+        replacements[tempId] = { id: attachment.id }
+      }
+      if (Object.keys(replacements).length > 0) {
+        await api.tasks.update(created.id, { description_doc: replaceImageAttachmentIds(descriptionDoc, replacements) })
+      }
+
       setShowSuccess(true)
       setTimeout(() => router.push('/backlog'), 1500)
     } catch (err) {
@@ -127,12 +155,14 @@ export default function AddTaskPage() {
 
           <div>
             <label className={labelClass}>Descripción</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <RichTextEditor
+              value={descriptionDoc}
               placeholder="Detalles adicionales (opcional)"
-              rows={3}
-              className={`${inputClass} resize-none`}
+              minHeightClassName="min-h-44"
+              onChange={(doc) => {
+                setDescriptionDoc(doc)
+              }}
+              uploadImage={uploadTemporaryImage}
             />
           </div>
 

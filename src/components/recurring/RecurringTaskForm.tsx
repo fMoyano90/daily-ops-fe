@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { Modal } from '@/components/shared/Modal'
 import { api } from '@/lib/api'
-import { RecurringTask, Project, Priority } from '@/lib/types'
+import { RecurringTask, Project, Priority, type RichTextDoc } from '@/lib/types'
+import { RichTextEditor } from '@/components/rich-text/RichTextEditor'
+import { collectImageAttachmentIds, emptyRichTextDoc, replaceImageAttachmentIds, richTextDocFromPlainText } from '@/lib/rich-text'
 import { TASK_CATEGORIES } from '@/lib/categories'
 import { normalizeExternalUrl } from '@/lib/utils'
 import { X } from 'lucide-react'
@@ -21,7 +23,7 @@ interface RecurringTaskFormProps {
 
 export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskFormProps) {
   const [title, setTitle] = useState(task?.title || '')
-  const [description, setDescription] = useState(task?.description || '')
+  const [descriptionDoc, setDescriptionDoc] = useState<RichTextDoc>(() => task?.description_doc || richTextDocFromPlainText(task?.description) || emptyRichTextDoc())
   const [projectId, setProjectId] = useState(task?.project_id || '')
   const [priority, setPriority] = useState<Priority>(task?.priority || 'medium')
   const [estimatedMinutes, setEstimatedMinutes] = useState(task?.estimated_seconds ? String(Math.round(task.estimated_seconds / 60)) : '')
@@ -33,6 +35,30 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
   const [recurrenceType, setRecurrenceType] = useState<'daily' | 'weekly' | 'monthly'>(task?.recurrence_type || 'weekly')
   const [recurrenceDays, setRecurrenceDays] = useState<number[]>(task?.recurrence_days || [0, 1, 2, 3, 4])
   const [loading, setLoading] = useState(false)
+  const tempImagesRef = useRef<Record<string, File>>({})
+  const tempImageUrlsRef = useRef<Record<string, string>>({})
+
+  useEffect(() => {
+    const tempImageUrls = tempImageUrlsRef.current
+    return () => {
+      Object.values(tempImageUrls).forEach((url) => URL.revokeObjectURL(url))
+    }
+  }, [])
+
+  const uploadTemporaryImage = async (file: File) => {
+    const id = `temp_${crypto.randomUUID()}`
+    const src = URL.createObjectURL(file)
+    tempImagesRef.current[id] = file
+    tempImageUrlsRef.current[id] = src
+    return { attachmentId: id, src, fileName: file.name }
+  }
+
+  const uploadDescriptionImage = async (file: File) => {
+    if (!task) return uploadTemporaryImage(file)
+    const attachment = await api.recurringTasks.uploadDescriptionAttachment(task.id, file)
+    const res = await api.recurringTasks.getDescriptionAttachmentUrl(task.id, attachment.id)
+    return { attachmentId: attachment.id, src: res.url, fileName: attachment.file_name }
+  }
 
   const priorityStyles: Record<Priority, string> = {
     critical: 'bg-[var(--priority-critical-bg)] border-[var(--priority-critical-border)] text-[var(--priority-critical-text)]',
@@ -56,7 +82,7 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
       const data: Record<string, unknown> = {
         project_id: projectId,
         title,
-        description: description || null,
+        description_doc: descriptionDoc,
         priority,
         estimated_seconds: estimatedMinutes ? Number(estimatedMinutes) * 60 : null,
         category: category || null,
@@ -68,10 +94,22 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
         reminder_minutes_before: meetingTime ? reminderMinutes : null,
       }
 
+      let savedTask: RecurringTask
       if (task) {
-        await api.recurringTasks.update(task.id, data)
+        savedTask = await api.recurringTasks.update(task.id, data)
       } else {
-        await api.recurringTasks.create(data)
+        savedTask = await api.recurringTasks.create(data)
+      }
+
+      const replacements: Record<string, { id: string; src?: string }> = {}
+      for (const tempId of collectImageAttachmentIds(descriptionDoc)) {
+        const file = tempImagesRef.current[tempId]
+        if (!file) continue
+        const attachment = await api.recurringTasks.uploadDescriptionAttachment(savedTask.id, file)
+        replacements[tempId] = { id: attachment.id }
+      }
+      if (Object.keys(replacements).length > 0) {
+        await api.recurringTasks.update(savedTask.id, { description_doc: replaceImageAttachmentIds(descriptionDoc, replacements) })
       }
       onClose()
     } catch (err) {
@@ -190,12 +228,17 @@ export function RecurringTaskForm({ task, projects, onClose }: RecurringTaskForm
           <label className="block text-sm font-medium text-text-muted mb-1.5">
             Descripción
           </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+          <RichTextEditor
+            value={descriptionDoc}
+            fallbackText={task?.description}
             placeholder="Detalles adicionales (opcional)"
-            rows={2}
-            className="w-full px-4 py-2.5 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+            minHeightClassName="min-h-40"
+            onChange={(doc) => setDescriptionDoc(doc)}
+            uploadImage={uploadDescriptionImage}
+            resolveImageUrl={task ? async (attachmentId) => {
+              const res = await api.recurringTasks.getDescriptionAttachmentUrl(task.id, attachmentId)
+              return res.url
+            } : undefined}
           />
         </div>
 

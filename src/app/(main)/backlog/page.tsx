@@ -11,8 +11,11 @@ import { CategoryPicker } from '@/components/tasks/CategoryPicker'
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { SkeletonRow, Skeleton } from '@/components/shared/Skeleton'
+import { RichTextEditor } from '@/components/rich-text/RichTextEditor'
+import { RichTextViewer } from '@/components/rich-text/RichTextViewer'
 import { api } from '@/lib/api'
-import { Task, Project, Priority, SubtaskStatus } from '@/lib/types'
+import { Task, Project, Priority, SubtaskStatus, type RichTextDoc } from '@/lib/types'
+import { emptyRichTextDoc, isRichTextDocEmpty, richTextDocFromPlainText } from '@/lib/rich-text'
 import { formatDuration, normalizeExternalUrl, sourceLabel } from '@/lib/utils'
 import { ListFilter, Plus, ExternalLink, CalendarDays, ChevronDown, ChevronRight, CheckCircle2, Circle, Repeat2, Bell, Trash2 } from 'lucide-react'
 import Link from 'next/link'
@@ -26,6 +29,8 @@ const itemVariants = {
   hidden: { opacity: 0, y: 8 },
   show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 28 } },
 }
+
+const priorityOrder: Record<Priority, number> = { critical: 0, high: 1, medium: 2, low: 3 }
 
 export default function BacklogPage() {
   const [tasks, setTasks] = useState<Task[]>([])
@@ -45,7 +50,7 @@ export default function BacklogPage() {
   const [editingTitle, setEditingTitle] = useState<string | null>(null)
   const [titleValue, setTitleValue] = useState('')
   const [editingDescription, setEditingDescription] = useState<string | null>(null)
-  const [descriptionValue, setDescriptionValue] = useState('')
+  const [descriptionDocValue, setDescriptionDocValue] = useState<RichTextDoc>(() => emptyRichTextDoc())
   const [editingPriority, setEditingPriority] = useState<string | null>(null)
   const [editingProject, setEditingProject] = useState<string | null>(null)
   const [addingRecurring, setAddingRecurring] = useState<string | null>(null)
@@ -69,7 +74,7 @@ export default function BacklogPage() {
   }, [])
 
   useEffect(() => {
-    loadData()
+    queueMicrotask(() => void loadData())
   }, [loadData])
 
   const ptr = usePullToRefresh({ onRefresh: loadData })
@@ -87,8 +92,6 @@ export default function BacklogPage() {
     })
   }, [tasks, filterProject, filterPriority, filterSource, filterType, projects])
 
-  const priorityOrder: Record<Priority, number> = { critical: 0, high: 1, medium: 2, low: 3 }
-
   const sortedTasks = useMemo(() => {
     return [...filteredTasks].sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
   }, [filteredTasks])
@@ -102,7 +105,8 @@ export default function BacklogPage() {
   const toggleExpand = (taskId: string) => {
     setExpandedTasks((prev) => {
       const next = new Set(prev)
-      next.has(taskId) ? next.delete(taskId) : next.add(taskId)
+      if (next.has(taskId)) next.delete(taskId)
+      else next.add(taskId)
       return next
     })
   }
@@ -179,29 +183,64 @@ export default function BacklogPage() {
   }
 
   const handleSaveDescription = async (task: Task) => {
-    const trimmed = descriptionValue.trim()
-    const value = trimmed.length > 0 ? trimmed : null
-
     try {
-      if (task.is_recurring && task.recurring_task_id) {
-        await api.recurringTasks.update(task.recurring_task_id, { description: value })
-      } else {
-        await api.tasks.update(task.id, { description: value })
-      }
+      const updated = task.is_recurring && task.recurring_task_id
+        ? await api.recurringTasks.update(task.recurring_task_id, { description_doc: descriptionDocValue })
+        : await api.tasks.update(task.id, { description_doc: descriptionDocValue })
 
-      setTasks((prev) =>
-        prev.map((t) =>
-          task.is_recurring && task.recurring_task_id
-            ? (t.recurring_task_id === task.recurring_task_id ? { ...t, description: value ?? undefined } : t)
-            : (t.id === task.id ? { ...t, description: value ?? undefined } : t)
+      if (task.is_recurring && task.recurring_task_id) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.recurring_task_id === task.recurring_task_id
+              ? {
+                  ...t,
+                  description: updated.description,
+                  description_doc: updated.description_doc,
+                  description_attachments: updated.description_attachments,
+                }
+              : t
+          )
         )
-      )
+      } else {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === task.id
+              ? {
+                  ...t,
+                  description: updated.description,
+                  description_doc: updated.description_doc,
+                  description_attachments: updated.description_attachments,
+                }
+              : t
+          )
+        )
+      }
       setEditingDescription(null)
-      setDescriptionValue('')
+      setDescriptionDocValue(emptyRichTextDoc())
     } catch (err) {
       console.error('Failed to update description:', err)
       alert('No se pudo actualizar la descripción. Intentalo de nuevo.')
     }
+  }
+
+  const handleUploadDescriptionImage = async (task: Task, file: File) => {
+    if (task.is_recurring && task.recurring_task_id) {
+      const attachment = await api.recurringTasks.uploadDescriptionAttachment(task.recurring_task_id, file)
+      const res = await api.recurringTasks.getDescriptionAttachmentUrl(task.recurring_task_id, attachment.id)
+      return { attachmentId: attachment.id, src: res.url, fileName: attachment.file_name }
+    }
+    const attachment = await api.tasks.uploadDescriptionAttachment(task.id, file)
+    const res = await api.tasks.getDescriptionAttachmentUrl(task.id, attachment.id)
+    return { attachmentId: attachment.id, src: res.url, fileName: attachment.file_name }
+  }
+
+  const handleResolveDescriptionImage = async (task: Task, attachmentId: string) => {
+    if (task.is_recurring && task.recurring_task_id) {
+      const res = await api.recurringTasks.getDescriptionAttachmentUrl(task.recurring_task_id, attachmentId)
+      return res.url
+    }
+    const res = await api.tasks.getDescriptionAttachmentUrl(task.id, attachmentId)
+    return res.url
   }
 
   const handleDeleteTask = async (task: Task) => {
@@ -404,6 +443,8 @@ export default function BacklogPage() {
               const completedSubtasks = subtasks.filter((s) => s.status === 'completed').length
               const safeExternalUrl = normalizeExternalUrl(task.external_url)
               const descriptionInputId = `task-description-${task.id}`
+              const descriptionDoc = task.description_doc || richTextDocFromPlainText(task.description) || null
+              const hasDescription = !!task.description?.trim() || !isRichTextDocEmpty(descriptionDoc)
 
               return (
                 <motion.div
@@ -573,38 +614,43 @@ export default function BacklogPage() {
                               }}
                               className="space-y-2"
                             >
-                              <textarea
-                                id={descriptionInputId}
-                                name="description"
-                                value={descriptionValue}
-                                onChange={(e) => setDescriptionValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); handleSaveDescription(task) }
-                                  else if (e.key === 'Escape') { setEditingDescription(null); setDescriptionValue('') }
-                                }}
-                                placeholder="Escribe una descripción para esta tarea..."
-                                rows={4}
-                                maxLength={4000}
-                                className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-bg-elevated text-text placeholder:text-text-subtle focus:outline-none focus:ring-2 focus:ring-accent resize-y"
-                                autoFocus
-                              />
+                              <div id={descriptionInputId}>
+                                <RichTextEditor
+                                  value={descriptionDocValue}
+                                  fallbackText={task.description}
+                                  placeholder="Escribe una descripción para esta tarea..."
+                                  minHeightClassName="min-h-48"
+                                  onChange={(doc) => setDescriptionDocValue(doc)}
+                                  uploadImage={(file) => handleUploadDescriptionImage(task, file)}
+                                  resolveImageUrl={(attachmentId) => handleResolveDescriptionImage(task, attachmentId)}
+                                />
+                              </div>
                               <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-                                <button type="button" onClick={() => { setEditingDescription(null); setDescriptionValue('') }} className="px-3 py-2 border border-border text-text-muted text-sm font-medium rounded-lg hover:bg-bg-muted transition-colors">Cancelar</button>
+                                <button type="button" onClick={() => { setEditingDescription(null); setDescriptionDocValue(emptyRichTextDoc()) }} className="px-3 py-2 border border-border text-text-muted text-sm font-medium rounded-lg hover:bg-bg-muted transition-colors">Cancelar</button>
                                 <button type="submit" className="px-3 py-2 bg-accent text-accent-fg text-sm font-medium rounded-lg hover:bg-[var(--accent-hover)] transition-colors">Guardar descripción</button>
                               </div>
                             </form>
                           ) : (
                             <div className="space-y-2">
-                              {task.description?.trim() ? (
-                                <p className="text-sm text-text-muted whitespace-pre-wrap">{task.description}</p>
+                              {hasDescription ? (
+                                <div className="rounded-lg border border-border bg-bg-muted/20 px-3 py-2">
+                                  <RichTextViewer
+                                    value={descriptionDoc}
+                                    fallbackText={task.description}
+                                    resolveImageUrl={(attachmentId) => handleResolveDescriptionImage(task, attachmentId)}
+                                  />
+                                </div>
                               ) : (
                                 <p className="text-sm text-text-subtle italic">Esta tarea no tiene descripción.</p>
                               )}
                               <button
-                                onClick={() => { setEditingDescription(task.id); setDescriptionValue(task.description ?? '') }}
+                                onClick={() => {
+                                  setEditingDescription(task.id)
+                                  setDescriptionDocValue(descriptionDoc || emptyRichTextDoc())
+                                }}
                                 className="text-sm text-accent hover:text-[var(--accent-hover)] font-medium transition-colors"
                               >
-                                {task.description?.trim() ? 'Editar descripción' : 'Añadir descripción'}
+                                {hasDescription ? 'Editar descripción' : 'Añadir descripción'}
                               </button>
                             </div>
                           )}

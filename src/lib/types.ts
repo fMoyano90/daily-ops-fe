@@ -23,11 +23,23 @@ export type RecurringTaskType = 'daily' | 'weekly' | 'monthly'
 
 export type RecurringInstanceStatus = 'pending' | 'completed' | 'skipped'
 
+export type RichTextDoc = Record<string, unknown>
+
+export interface RichTextAttachment {
+  id: string
+  kind: string
+  file_name: string
+  mime_type: string
+  size_bytes: number
+}
+
 export interface RecurringTask {
   id: string
   project_id: string
   title: string
-  description?: string
+  description?: string | null
+  description_doc?: RichTextDoc | null
+  description_attachments?: RichTextAttachment[]
   priority: Priority
   estimated_seconds?: number | null
   category?: string
@@ -77,7 +89,9 @@ export interface Task {
   id: string
   project_id: string
   title: string
-  description?: string
+  description?: string | null
+  description_doc?: RichTextDoc | null
+  description_attachments?: RichTextAttachment[]
   source: TaskSource
   external_key?: string
   external_url?: string
@@ -111,7 +125,9 @@ export interface DailyTask {
   task_id?: string
   recurring_task_id?: string
   title_snapshot: string
-  description?: string
+  description?: string | null
+  description_doc?: RichTextDoc | null
+  description_attachments?: RichTextAttachment[]
   external_key?: string
   external_url?: string
   tag?: string

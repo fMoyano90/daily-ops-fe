@@ -3,14 +3,14 @@
 import { useState, useEffect, useCallback, type DragEvent } from 'react'
 import { motion } from 'motion/react'
 import { Header } from '@/components/layout/Header'
-import { TaskCard } from '@/components/today/TaskCard'
+import { TaskCard, type DescriptionOwner } from '@/components/today/TaskCard'
 import { DayCloser } from '@/components/today/DayCloser'
 import { PriorityBadge } from '@/components/tasks/PriorityBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Modal } from '@/components/shared/Modal'
 import { SkeletonStats } from '@/components/shared/Skeleton'
 import { api } from '@/lib/api'
-import { DailyTask, DailyTaskStatus, EmotionEnergy, EmotionEntry, EmotionValence, Priority, SubtaskStatus, Task, Project, TaskEmotionPhase } from '@/lib/types'
+import { DailyTask, DailyTaskStatus, EmotionEnergy, EmotionEntry, EmotionValence, Priority, SubtaskStatus, Task, Project, TaskEmotionPhase, type RichTextDoc } from '@/lib/types'
 import { normalizeExternalUrl } from '@/lib/utils'
 import { Plus, Inbox, Clock, ExternalLink, Repeat2, Tag, Bell, GripVertical } from 'lucide-react'
 import Link from 'next/link'
@@ -133,7 +133,7 @@ export default function TodayPage() {
             try {
               const sessions = await api.timers.sessions(t.id)
               const active = sessions.find((s) => !s.stopped_at)
-              console.log('[timer] task:', t.id, 'status:', t.status, 'live_total_seconds:', t.live_total_seconds, 'total_seconds:', t.total_seconds, 'sessions:', sessions.length, 'active:', !!active)
+              
               return active ? ([t.id, active.started_at] as const) : null
             } catch {
               return null
@@ -144,7 +144,6 @@ export default function TodayPage() {
         for (const entry of results) {
           if (entry) map[entry[0]] = entry[1]
         }
-        console.log('[timer] activeSessionsByTaskId:', map)
         setActiveSessionsByTaskId(map)
       } else {
         setActiveSessionsByTaskId({})
@@ -437,15 +436,41 @@ export default function TodayPage() {
     }
   }
 
-  const handleUpdateDescription = async (taskId: string, description: string) => {
-    const trimmed = description.trim()
+  const handleUpdateDescription = async (owner: DescriptionOwner, descriptionDoc: RichTextDoc, plainText: string) => {
+    const trimmed = plainText.trim()
     const value = trimmed.length > 0 ? trimmed : null
-    await api.tasks.update(taskId, { description: value })
+    const updated = owner.type === 'task'
+      ? await api.tasks.update(owner.id, { description_doc: descriptionDoc })
+      : await api.recurringTasks.update(owner.id, { description_doc: descriptionDoc })
     setTasks((prev) =>
       prev.map((t) =>
-        t.task_id === taskId ? { ...t, description: value ?? undefined } : t
+        (owner.type === 'task' && t.task_id === owner.id) || (owner.type === 'recurring' && t.recurring_task_id === owner.id)
+          ? {
+              ...t,
+              description: value,
+              description_doc: updated.description_doc,
+              description_attachments: updated.description_attachments,
+            }
+          : t
       )
     )
+  }
+
+  const handleUploadDescriptionImage = async (owner: DescriptionOwner, file: File) => {
+    const attachment = owner.type === 'task'
+      ? await api.tasks.uploadDescriptionAttachment(owner.id, file)
+      : await api.recurringTasks.uploadDescriptionAttachment(owner.id, file)
+    const res = owner.type === 'task'
+      ? await api.tasks.getDescriptionAttachmentUrl(owner.id, attachment.id)
+      : await api.recurringTasks.getDescriptionAttachmentUrl(owner.id, attachment.id)
+    return { attachmentId: attachment.id, src: res.url, fileName: attachment.file_name }
+  }
+
+  const handleResolveDescriptionImage = async (owner: DescriptionOwner, attachmentId: string) => {
+    const res = owner.type === 'task'
+      ? await api.tasks.getDescriptionAttachmentUrl(owner.id, attachmentId)
+      : await api.recurringTasks.getDescriptionAttachmentUrl(owner.id, attachmentId)
+    return res.url
   }
 
   const handleUpdateCategory = async (
@@ -777,6 +802,8 @@ export default function TodayPage() {
                       onAddSubtask={handleAddSubtask}
                       onUpdateSubtask={handleUpdateSubtask}
                       onUpdateDescription={handleUpdateDescription}
+                      onUploadDescriptionImage={handleUploadDescriptionImage}
+                      onResolveDescriptionImage={handleResolveDescriptionImage}
                       onUpdateCategory={handleUpdateCategory}
                       onRemove={handleRemoveFromToday}
                       onReopen={handleReopenTask}

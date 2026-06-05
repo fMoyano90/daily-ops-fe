@@ -11,7 +11,11 @@ import { TaskTimer } from '@/components/today/TaskTimer'
 import { SubtaskList } from '@/components/today/SubtaskList'
 import { TaskComments } from '@/components/today/TaskComments'
 import { Modal } from '@/components/shared/Modal'
+import { RichTextEditor } from '@/components/rich-text/RichTextEditor'
+import { RichTextViewer } from '@/components/rich-text/RichTextViewer'
+import { emptyRichTextDoc, isRichTextDocEmpty, richTextDocFromPlainText } from '@/lib/rich-text'
 import { formatDuration, normalizeExternalUrl, projectTypeLabel } from '@/lib/utils'
+import type { RichTextDoc } from '@/lib/types'
 import { ChevronDown, ChevronRight, CheckCircle2, Repeat2, X, FileText, RotateCcw, AlertTriangle, ExternalLink, Tag, Bell } from 'lucide-react'
 
 interface TaskCardProps {
@@ -22,7 +26,9 @@ interface TaskCardProps {
   onToggleSubtask: (subtaskId: string) => void
   onAddSubtask?: (taskId: string, title: string) => void
   onUpdateSubtask?: (taskId: string, subtaskId: string, data: { title?: string; priority?: Priority }) => void
-  onUpdateDescription?: (taskId: string, description: string) => Promise<void> | void
+  onUpdateDescription?: (owner: DescriptionOwner, descriptionDoc: RichTextDoc, plainText: string) => Promise<void> | void
+  onUploadDescriptionImage?: (owner: DescriptionOwner, file: File) => Promise<{ attachmentId: string; src: string; fileName?: string }>
+  onResolveDescriptionImage?: (owner: DescriptionOwner, attachmentId: string) => Promise<string>
   onUpdateCategory?: (taskId: string, data: { category: string | null; due_date?: string | null; meeting_time?: string | null; reminder_minutes_before?: number | null }) => Promise<void> | void
   onRemove?: (taskId: string) => void
   onReopen?: (taskId: string) => void
@@ -33,6 +39,8 @@ interface TaskCardProps {
   dragHandle?: ReactNode
 }
 
+export type DescriptionOwner = { type: 'task' | 'recurring'; id: string }
+
 export function TaskCard({
   task,
   activeSessionStartedAt,
@@ -42,6 +50,8 @@ export function TaskCard({
   onAddSubtask,
   onUpdateSubtask,
   onUpdateDescription,
+  onUploadDescriptionImage,
+  onResolveDescriptionImage,
   onUpdateCategory,
   onRemove,
   onReopen,
@@ -54,6 +64,7 @@ export function TaskCard({
   const [expanded, setExpanded] = useState(false)
   const [descriptionOpen, setDescriptionOpen] = useState(false)
   const [descriptionDraft, setDescriptionDraft] = useState('')
+  const [descriptionDocDraft, setDescriptionDocDraft] = useState<RichTextDoc>(() => emptyRichTextDoc())
   const [descriptionEditing, setDescriptionEditing] = useState(false)
   const [descriptionSaving, setDescriptionSaving] = useState(false)
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
@@ -61,8 +72,14 @@ export function TaskCard({
   const isActive = task.status === 'in_progress' || task.status === 'paused'
   const isCompleted = task.status === 'completed'
   const isRecurring = !!task.recurring_task_id
-  const hasDescription = !!task.description && task.description.trim().length > 0
-  const canEditDescription = !!onUpdateDescription && !!task.task_id
+  const descriptionOwner: DescriptionOwner | null = task.task_id
+    ? { type: 'task', id: task.task_id }
+    : task.recurring_task_id
+    ? { type: 'recurring', id: task.recurring_task_id }
+    : null
+  const currentDescriptionDoc = task.description_doc || richTextDocFromPlainText(task.description) || null
+  const hasDescription = !!task.description?.trim() || !isRichTextDocEmpty(currentDescriptionDoc)
+  const canEditDescription = !!onUpdateDescription && !!descriptionOwner
   const safeExternalUrl = normalizeExternalUrl(task.external_url)
   const emotionBefore = task.emotion_entries?.find((entry) => entry.task_phase === 'before')
   const emotionAfter = task.emotion_entries?.find((entry) => entry.task_phase === 'after')
@@ -70,6 +87,7 @@ export function TaskCard({
 
   const openDescription = () => {
     setDescriptionDraft(task.description ?? '')
+    setDescriptionDocDraft(currentDescriptionDoc || emptyRichTextDoc())
     setDescriptionEditing(!hasDescription && canEditDescription)
     setDescriptionOpen(true)
   }
@@ -80,12 +98,12 @@ export function TaskCard({
   }
 
   const handleSaveDescription = async () => {
-    if (!onUpdateDescription || !task.task_id) return
+    if (!onUpdateDescription || !descriptionOwner) return
     setDescriptionSaving(true)
     try {
-      await onUpdateDescription(task.task_id, descriptionDraft)
+      await onUpdateDescription(descriptionOwner, descriptionDocDraft, descriptionDraft)
       setDescriptionEditing(false)
-      if (!descriptionDraft.trim()) setDescriptionOpen(false)
+      if (!descriptionDraft.trim() && isRichTextDocEmpty(descriptionDocDraft)) setDescriptionOpen(false)
     } catch (err) {
       console.error('Failed to save description:', err)
     } finally {
@@ -354,28 +372,37 @@ export function TaskCard({
           </div>
 
           {descriptionEditing ? (
-            <textarea
-              value={descriptionDraft}
-              onChange={(e) => setDescriptionDraft(e.target.value)}
+            <RichTextEditor
+              value={descriptionDocDraft}
+              fallbackText={task.description}
               placeholder="Escribe una descripción para esta tarea..."
-              rows={10}
-              className="w-full text-sm px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent bg-bg-elevated text-text placeholder:text-text-subtle resize-y max-h-[60vh]"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveDescription()
-                if (e.key === 'Escape') {
-                  if (hasDescription) {
-                    setDescriptionEditing(false)
-                    setDescriptionDraft(task.description ?? '')
-                  } else {
-                    closeDescription()
-                  }
-                }
+              minHeightClassName="min-h-64 max-h-[60vh] overflow-y-auto"
+              onChange={(doc, plainText) => {
+                setDescriptionDocDraft(doc)
+                setDescriptionDraft(plainText)
               }}
+              uploadImage={
+                onUploadDescriptionImage && descriptionOwner
+                  ? (file) => onUploadDescriptionImage(descriptionOwner, file)
+                  : undefined
+              }
+              resolveImageUrl={
+                onResolveDescriptionImage && descriptionOwner
+                  ? (attachmentId) => onResolveDescriptionImage(descriptionOwner, attachmentId)
+                  : undefined
+              }
             />
           ) : hasDescription ? (
-            <div className="text-sm text-text-muted whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
-              {task.description}
+            <div className="max-h-[60vh] overflow-y-auto">
+              <RichTextViewer
+                value={currentDescriptionDoc}
+                fallbackText={task.description}
+                resolveImageUrl={
+                  onResolveDescriptionImage && descriptionOwner
+                    ? (attachmentId) => onResolveDescriptionImage(descriptionOwner, attachmentId)
+                    : undefined
+                }
+              />
             </div>
           ) : (
             <p className="text-sm text-text-subtle italic">Esta tarea no tiene descripción.</p>
@@ -389,6 +416,7 @@ export function TaskCard({
                     if (hasDescription) {
                       setDescriptionEditing(false)
                       setDescriptionDraft(task.description ?? '')
+                      setDescriptionDocDraft(currentDescriptionDoc || emptyRichTextDoc())
                     } else {
                       closeDescription()
                     }
@@ -410,6 +438,7 @@ export function TaskCard({
                 <button
                   onClick={() => {
                     setDescriptionDraft(task.description ?? '')
+                    setDescriptionDocDraft(currentDescriptionDoc || emptyRichTextDoc())
                     setDescriptionEditing(true)
                   }}
                   className="px-4 py-2 text-sm font-medium text-accent hover:bg-accent-soft rounded-lg transition-colors"
