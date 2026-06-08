@@ -19,7 +19,10 @@ export const RichTextImage = Image.extend({
 })
 
 export const richTextExtensions = [
-  StarterKit.configure({ heading: { levels: [2, 3] } }),
+  StarterKit.configure({
+    heading: { levels: [2, 3] },
+    link: false,
+  }),
   Link.configure({
     autolink: true,
     openOnClick: false,
