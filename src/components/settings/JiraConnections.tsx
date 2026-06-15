@@ -137,7 +137,7 @@ export function JiraConnections() {
   }
 
   function summarizeResult(r: JiraSyncResult) {
-    const base = `${r.connection_name}: ${r.created} creadas, ${r.updated} actualizadas`
+    const base = `${r.connection_name}: ${r.fetched} encontradas en Jira, ${r.created} creadas, ${r.updated} actualizadas`
     return r.errors.length ? `${base} (${r.errors.length} errores)` : base
   }
 

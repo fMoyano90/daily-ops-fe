@@ -33,6 +33,17 @@ async function writeCache<T>(key: string, data: T): Promise<void> {
   }
 }
 
+async function clearCache(keys: string[]): Promise<void> {
+  await Promise.all(keys.map((key) => idbDel(CACHE_PREFIX + key).catch(() => {})))
+}
+
+const JIRA_SYNC_CACHE_KEYS = [
+  '/jira-connections',
+  '/tasks/backlog',
+  '/daily-plans/today',
+  '/daily-plans/today/suggestions',
+]
+
 function formatApiError(error: unknown, fallback: string): string {
   if (!error || typeof error !== 'object') return fallback
   const detail = (error as { detail?: unknown }).detail
@@ -342,10 +353,16 @@ export const api = {
       }),
     test: (id: string) =>
       fetchApi<JiraTestResult>(`/jira-connections/${id}/test`, { method: 'POST' }),
-    sync: (id: string) =>
-      fetchApi<JiraSyncResult>(`/jira-connections/${id}/sync`, { method: 'POST' }),
-    syncAll: () =>
-      fetchApi<JiraSyncResult[]>('/jira-connections/sync-all', { method: 'POST' }),
+    sync: async (id: string) => {
+      const result = await fetchApi<JiraSyncResult>(`/jira-connections/${id}/sync`, { method: 'POST' })
+      await clearCache(JIRA_SYNC_CACHE_KEYS)
+      return result
+    },
+    syncAll: async () => {
+      const result = await fetchApi<JiraSyncResult[]>('/jira-connections/sync-all', { method: 'POST' })
+      await clearCache(JIRA_SYNC_CACHE_KEYS)
+      return result
+    },
   },
 
   taskComments: {

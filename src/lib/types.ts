@@ -205,6 +205,7 @@ export interface JiraConnection {
 export interface JiraSyncResult {
   connection_id: string
   connection_name: string
+  fetched: number
   created: number
   updated: number
   skipped: number
